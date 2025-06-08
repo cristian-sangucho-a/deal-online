@@ -3,12 +3,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-//Configurar transporter para nodemailer
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
+        pass: process.env.EMAIL_PASSWORD,
     },
 });
 
@@ -23,13 +22,13 @@ class EmailService {
 
         try {
             await transporter.sendMail(mailOptions);
-            console.log(`Correo de verificación enviado a ${to}`);
+            console.log(`Correo enviado a ${to}`);
         } catch (error) {
-            console.error('Error al enviar el correo de verificación:', error);
-            throw new Error('No se pudo enviar el correo de verificación');
+            console.error('Error al enviar el correo:', error);
+            throw new Error('No se pudo enviar el correo');
         }
     }
-    
+
     async sendVerificationEmail(toEmail, verificationCode) {
         const mailOptions = {
             from: process.env.EMAIL_USER,
@@ -42,6 +41,7 @@ class EmailService {
                 <p>Tu código de verificación es: <strong>${verificationCode}</strong></p>
                 <p>Este código es válido por 15 minutos. Ingresa este código en la página de verificación para completar tu registro y empezar a participar en nuestras subastas.</p>
                 <p>Si no solicitaste este código, ignora este mensaje.</p>
+                <p><a href="https://subastaapp.com/verify">Verificar mi cuenta</a></p>
             `,
         };
 
@@ -66,7 +66,7 @@ class EmailService {
                 <p>Tu código de verificación es: <strong>${verificationCode}</strong></p>
                 <p>Este código es válido por 15 minutos. Ingresa este código en la página de restablecimiento de contraseña para continuar.</p>
                 <p>Si no solicitaste este código, ignora este mensaje o contacta con nuestro soporte.</p>
-                <p><a href="https://plannink.com/reset-password">Restablecer mi contraseña</a></p>
+                <p><a href="https://subastaapp.com/reset-password">Restablecer mi contraseña</a></p>
             `,
         };
 
@@ -127,6 +127,43 @@ class EmailService {
         }
     }
 
-};
+    async sendAuctionClosedNotification(toEmail, auctionId, productName, isWinner, winningAmount) {
+        const subject = isWinner ? `¡Ganaste la subasta de ${productName}!` : `Subasta cerrada: ${productName}`;
+        const text = isWinner
+            ? `¡Felicidades! Has ganado la subasta del producto "${productName}" con una oferta de ${winningAmount}.`
+            : `La subasta del producto "${productName}" ha finalizado con una oferta ganadora de ${winningAmount}.`;
+        const html = isWinner
+            ? `
+                <h2>¡Ganaste la subasta en SubastaApp!</h2>
+                <p>¡Felicidades! Has ganado la subasta del producto <strong>${productName}</strong> con una oferta de <strong>${winningAmount}</strong>.</p>
+                <p>Contacta al vendedor para coordinar la entrega. Puedes ver los detalles en la subasta.</p>
+                <p><a href="https://subastaapp.com/auctions/${auctionId}">Ver subasta</a></p>
+                <p>Si no deseas recibir estas notificaciones, puedes ajustar tus preferencias en tu perfil.</p>
+            `
+            : `
+                <h2>Subasta cerrada en SubastaApp</h2>
+                <p>La subasta del producto <strong>${productName}</strong> ha finalizado con una oferta ganadora de <strong>${winningAmount}</strong>.</p>
+                <p>Puedes ver los detalles en la subasta o crear una nueva.</p>
+                <p><a href="https://subastaapp.com/auctions/${auctionId}">Ver subasta</a></p>
+                <p>Si no deseas recibir estas notificaciones, puedes ajustar tus preferencias en tu perfil.</p>
+            `;
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: toEmail,
+            subject,
+            text,
+            html,
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            console.log(`Correo de notificación de subasta cerrada enviado a ${toEmail}`);
+        } catch (error) {
+            console.error('Error al enviar el correo de notificación de subasta cerrada:', error);
+            throw new Error('No se pudo enviar el correo de notificación de subasta cerrada');
+        }
+    }
+}
 
 export default new EmailService();
