@@ -1,6 +1,7 @@
 import winston from 'winston';
-import path from 'path'; // <-- Añade esta importación
-import { PATHS } from '../config/constants.js';
+import path from 'path';
+
+const logsDir = path.resolve('logs'); // Resuelve la ruta absoluta a la carpeta logs
 
 const logger = winston.createLogger({
     level: 'info',
@@ -10,11 +11,11 @@ const logger = winston.createLogger({
     ),
     transports: [
         new winston.transports.File({
-            filename: path.join(PATHS.LOGS_DIR, 'error.log'),
+            filename: path.join(logsDir, 'error.log'),
             level: 'error'
         }),
         new winston.transports.File({
-            filename: path.join(PATHS.LOGS_DIR, 'combined.log')
+            filename: path.join(logsDir, 'combined.log')
         }),
         new winston.transports.Console({
             format: winston.format.simple()
