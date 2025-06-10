@@ -1,3 +1,0 @@
-{"level":"info","message":"::1 - - [30/May/2025:21:58:41 +0000] \"POST /api/auth/register HTTP/1.1\" 201 154 \"-\" \"PostmanRuntime/7.39.1\"","timestamp":"2025-05-30T21:58:41.339Z"}
-{"level":"info","message":"::1 - - [30/May/2025:21:59:49 +0000] \"POST /api/auth/verify HTTP/1.1\" 200 368 \"-\" \"PostmanRuntime/7.39.1\"","timestamp":"2025-05-30T21:59:49.605Z"}
-{"level":"info","message":"::1 - - [30/May/2025:22:00:28 +0000] \"POST /api/auth/login HTTP/1.1\" 200 350 \"-\" \"PostmanRuntime/7.39.1\"","timestamp":"2025-05-30T22:00:28.438Z"}
