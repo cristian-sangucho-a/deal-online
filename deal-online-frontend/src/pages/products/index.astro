@@ -1,0 +1,186 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { api } from '../../services/api.js';
+
+const searchParams = Astro.url.searchParams;
+const page = parseInt(searchParams.get('page') || '1');
+const search = searchParams.get('search') || '';
+const category = searchParams.get('category') || '';
+
+let products = [];
+let totalPages = 1;
+let error = null;
+
+try {
+  const response = await api.getAllProducts(page, 12, search, category);
+  products = response.products || [];
+  totalPages = Math.ceil((response.total || 0) / 12);
+} catch (err) {
+  error = err.message;
+}
+---
+
+<Layout title="Productos - AuctionHub">
+  <Header />
+  
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Productos</h1>
+        <p class="mt-1 text-gray-600">Descubre productos únicos en nuestras subastas</p>
+      </div>
+      
+      <div class="mt-4 md:mt-0">
+        <a 
+          href="/create-product" 
+          class="inline-flex items-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+          </svg>
+          Vender Producto
+        </a>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+      <form method="GET" class="flex flex-col md:flex-row gap-4">
+        <div class="flex-1">
+          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">
+            Buscar productos
+          </label>
+          <input 
+            type="text" 
+            id="search" 
+            name="search" 
+            value={search}
+            placeholder="Buscar por nombre o descripción..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+          />
+        </div>
+        
+        <div class="md:w-48">
+          <label for="category" class="block text-sm font-medium text-gray-700 mb-1">
+            Categoría
+          </label>
+          <select 
+            id="category" 
+            name="category"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+          >
+            <option value="">Todas las categorías</option>
+            <option value="electronics" selected={category === 'electronics'}>Electrónicos</option>
+            <option value="fashion" selected={category === 'fashion'}>Moda</option>
+            <option value="home" selected={category === 'home'}>Hogar</option>
+            <option value="collectibles" selected={category === 'collectibles'}>Coleccionables</option>
+            <option value="art" selected={category === 'art'}>Arte</option>
+            <option value="books" selected={category === 'books'}>Libros</option>
+            <option value="sports" selected={category === 'sports'}>Deportes</option>
+            <option value="toys" selected={category === 'toys'}>Juguetes</option>
+          </select>
+        </div>
+        
+        <div class="flex items-end">
+          <button 
+            type="submit"
+            class="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            Buscar
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Results -->
+    {error ? (
+      <div class="text-center py-12">
+        <div class="text-error-500 mb-4">
+          <svg class="w-12 h-12 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold text-gray-900 mb-2">Error al cargar productos</h2>
+        <p class="text-gray-600 mb-4">{error}</p>
+        <button 
+          onclick="window.location.reload()" 
+          class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+        >
+          Reintentar
+        </button>
+      </div>
+    ) : products.length === 0 ? (
+      <div class="text-center py-12">
+        <div class="text-gray-400 mb-4">
+          <svg class="w-12 h-12 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-semibold text-gray-900 mb-2">No se encontraron productos</h2>
+        <p class="text-gray-600 mb-4">
+          {search || category ? 'Intenta ajustar tus filtros de búsqueda' : 'Aún no hay productos disponibles'}
+        </p>
+        {(search || category) && (
+          <a 
+            href="/products" 
+            class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            Ver todos los productos
+          </a>
+        )}
+      </div>
+    ) : (
+      <>
+        <!-- Products Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+          {products.map((product) => (
+            <ProductCard product={product} />
+          ))}
+        </div>
+
+        <!-- Pagination -->
+        {totalPages > 1 && (
+          <div class="flex justify-center">
+            <nav class="flex space-x-2">
+              {page > 1 && (
+                <a 
+                  href={`/products?page=${page - 1}${search ? `&search=${encodeURIComponent(search)}` : ''}${category ? `&category=${category}` : ''}`}
+                  class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  ← Anterior
+                </a>
+              )}
+              
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
+                return (
+                  <a 
+                    href={`/products?page=${pageNum}${search ? `&search=${encodeURIComponent(search)}` : ''}${category ? `&category=${category}` : ''}`}
+                    class={`px-3 py-2 rounded-md transition-colors ${pageNum === page 
+                      ? 'bg-primary-500 text-white' 
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {pageNum}
+                  </a>
+                );
+              })}
+              
+              {page < totalPages && (
+                <a 
+                  href={`/products?page=${page + 1}${search ? `&search=${encodeURIComponent(search)}` : ''}${category ? `&category=${category}` : ''}`}
+                  class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  Siguiente →
+                </a>
+              )}
+            </nav>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</Layout>

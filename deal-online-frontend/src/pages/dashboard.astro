@@ -1,0 +1,312 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+---
+
+<Layout title="Dashboard - Deal Online">
+  <Header />
+  
+  <div class="min-h-screen bg-gray-50">
+    <!-- Protected Route Check -->
+    <div id="auth-check" class="hidden min-h-screen flex items-center justify-center">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+        <p class="text-gray-600">Verificando autenticación...</p>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div id="dashboard-content" class="hidden">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Header -->
+        <div class="bg-gradient-to-r from-primary-500 to-accent-500 rounded-lg p-6 text-white mb-8">
+          <h1 class="text-2xl font-bold mb-2">¡Bienvenido de vuelta, <span id="user-name"></span>!</h1>
+          <p class="opacity-90">Gestiona tus subastas y ofertas desde tu panel de control</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div class="bg-white rounded-lg p-6 shadow-sm">
+            <div class="flex items-center">
+              <div class="p-3 bg-primary-100 rounded-lg">
+                <svg class="w-6 h-6 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <p class="text-sm text-gray-600">Mis Productos</p>
+                <p class="text-2xl font-bold text-gray-900" id="products-count">-</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-6 shadow-sm">
+            <div class="flex items-center">
+              <div class="p-3 bg-accent-100 rounded-lg">
+                <svg class="w-6 h-6 text-accent-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9.5 9.293 8.207a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414L11 9.586z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <p class="text-sm text-gray-600">Subastas Activas</p>
+                <p class="text-2xl font-bold text-gray-900" id="active-auctions-count">-</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-6 shadow-sm">
+            <div class="flex items-center">
+              <div class="p-3 bg-success-100 rounded-lg">
+                <svg class="w-6 h-6 text-success-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 17v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <p class="text-sm text-gray-600">Mis Ofertas</p>
+                <p class="text-2xl font-bold text-gray-900" id="bids-count">-</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-6 shadow-sm">
+            <div class="flex items-center">
+              <div class="p-3 bg-warning-100 rounded-lg">
+                <svg class="w-6 h-6 text-warning-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.766 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.766-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <p class="text-sm text-gray-600">Ganadas</p>
+                <p class="text-2xl font-bold text-gray-900" id="won-auctions-count">-</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <a href="/create-product" class="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow group">
+            <div class="flex items-center">
+              <div class="p-3 bg-primary-100 rounded-lg group-hover:bg-primary-200 transition-colors">
+                <svg class="w-6 h-6 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <h3 class="font-semibold text-gray-900">Vender Producto</h3>
+                <p class="text-sm text-gray-600">Crea una nueva subasta</p>
+              </div>
+            </div>
+          </a>
+
+          <a href="/my-auctions" class="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow group">
+            <div class="flex items-center">
+              <div class="p-3 bg-accent-100 rounded-lg group-hover:bg-accent-200 transition-colors">
+                <svg class="w-6 h-6 text-accent-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <h3 class="font-semibold text-gray-900">Mis Subastas</h3>
+                <p class="text-sm text-gray-600">Gestiona tus productos</p>
+              </div>
+            </div>
+          </a>
+
+          <a href="/my-bids" class="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow group">
+            <div class="flex items-center">
+              <div class="p-3 bg-success-100 rounded-lg group-hover:bg-success-200 transition-colors">
+                <svg class="w-6 h-6 text-success-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 17v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <h3 class="font-semibold text-gray-900">Mis Ofertas</h3>
+                <p class="text-sm text-gray-600">Ve tus participaciones</p>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white rounded-lg shadow-sm">
+          <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Actividad Reciente</h2>
+          </div>
+          <div id="recent-activity" class="p-6">
+            <div class="flex items-center justify-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { $user, $token, authActions } from '../stores/authStore.js';
+  import { api } from '../services/api.js';
+
+  const authCheck = document.getElementById('auth-check');
+  const dashboardContent = document.getElementById('dashboard-content');
+  const userName = document.getElementById('user-name');
+
+  async function checkAuthentication() {
+    const token = $token.get();
+    const user = $user.get();
+
+    if (!token || !user) {
+      // Show auth check loading
+      if (authCheck) authCheck.classList.remove('hidden');
+      if (dashboardContent) dashboardContent.classList.add('hidden');
+      
+      // Redirect to login after a short delay
+      setTimeout(() => {
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      }, 1000);
+      return false;
+    }
+
+    // User is authenticated
+    if (authCheck) authCheck.classList.add('hidden');
+    if (dashboardContent) dashboardContent.classList.remove('hidden');
+    if (userName) {
+      userName.textContent = user.nombre;
+    }
+    
+    return true;
+  }
+
+  async function loadDashboardData() {
+    try {
+      const token = $token.get();
+      if (!token) return;
+
+      // Load user's products and stats
+      const [userProducts, userBids] = await Promise.all([
+        api.getUserProducts(token),
+        api.getUserBids(token)
+      ]);
+
+      // Update stats
+      const productsCount = userProducts.length;
+      const activeAuctionsCount = userProducts.filter((p: any) => p.Auction?.status === 'active').length;
+      const bidsCount = userBids.length;
+      const wonAuctionsCount = userBids.filter(bid => bid.auction?.status === 'closed' && bid.auction?.winner_id === $user.get().id).length;
+
+      document.getElementById('products-count').textContent = productsCount;
+      document.getElementById('active-auctions-count').textContent = activeAuctionsCount;
+      document.getElementById('bids-count').textContent = bidsCount;
+      document.getElementById('won-auctions-count').textContent = wonAuctionsCount;
+
+      // Load recent activity
+      loadRecentActivity(userProducts, userBids);
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Show error stats
+      document.getElementById('products-count').textContent = '0';
+      document.getElementById('active-auctions-count').textContent = '0';
+      document.getElementById('bids-count').textContent = '0';
+      document.getElementById('won-auctions-count').textContent = '0';
+    }
+  }
+
+  function loadRecentActivity(products, bids) {
+    const recentActivityContainer = document.getElementById('recent-activity');
+    
+    // Combine and sort recent activities
+    const activities = [];
+    
+    // Recent products
+    products.slice(0, 3).forEach(product => {
+      activities.push({
+        type: 'product',
+        date: new Date(product.createdAt),
+        content: `Publicaste "${product.name}"`,
+        link: `/products/${product.id}`
+      });
+    });
+    
+    // Recent bids
+    bids.slice(0, 3).forEach(bid => {
+      activities.push({
+        type: 'bid',
+        date: new Date(bid.createdAt),
+        content: `Ofertaste $${bid.amount.toLocaleString()} en "${bid.auction?.Product?.name || 'Producto'}"`,
+        link: `/products/${bid.auction?.Product?.id}`
+      });
+    });
+    
+    // Sort by date (most recent first)
+    activities.sort((a, b) => b.date - a.date);
+    
+    if (activities.length === 0) {
+      recentActivityContainer.innerHTML = `
+        <div class="text-center py-8">
+          <div class="text-gray-400 mb-2">
+            <svg class="w-12 h-12 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <p class="text-gray-500">No hay actividad reciente</p>
+          <p class="text-sm text-gray-400 mt-1">Comienza creando tu primer producto o haciendo una oferta</p>
+        </div>
+      `;
+      return;
+    }
+    
+    recentActivityContainer.innerHTML = `
+      <div class="space-y-4">
+        ${activities.slice(0, 5).map(activity => `
+          <div class="flex items-start space-x-3">
+            <div class="flex-shrink-0">
+              ${activity.type === 'product' ? `
+                <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+                  <svg class="w-4 h-4 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                  </svg>
+                </div>
+              ` : `
+                <div class="w-8 h-8 bg-success-100 rounded-full flex items-center justify-center">
+                  <svg class="w-4 h-4 text-success-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 17v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                  </svg>
+                </div>
+              `}
+            </div>
+            <div class="flex-1">
+              <p class="text-sm text-gray-900">${activity.content}</p>
+              <p class="text-xs text-gray-500">${activity.date.toLocaleDateString()} ${activity.date.toLocaleTimeString()}</p>
+            </div>
+            ${activity.link ? `
+              <a href="${activity.link}" class="text-primary-600 hover:text-primary-500 text-sm">
+                Ver →
+              </a>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // Initialize dashboard
+  async function initDashboard() {
+    const isAuthenticated = await checkAuthentication();
+    if (isAuthenticated) {
+      await loadDashboardData();
+    }
+  }
+
+  // Listen for auth state changes
+  $token.subscribe(async (token) => {
+    if (token) {
+      await initDashboard();
+    }
+  });
+
+  // Initial load
+  initDashboard();
+</script>

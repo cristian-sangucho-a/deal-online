@@ -1,0 +1,316 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import { api } from '../../services/api.js';
+
+const { id } = Astro.params;
+
+let product = null;
+let error = null;
+
+try {
+  product = await api.getProductById(id);
+} catch (err) {
+  error = err.message;
+}
+
+if (!product && !error) {
+  return Astro.redirect('/404');
+}
+---
+
+<Layout title={product ? `${product.name} - Deal Online` : 'Producto no encontrado'}>
+  <Header />
+  
+  {error ? (
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+      <h1 class="text-2xl font-bold text-gray-900 mb-4">Error al cargar el producto</h1>
+      <p class="text-gray-600 mb-6">{error}</p>
+      <a href="/products" class="text-primary-600 hover:text-primary-500">← Volver a productos</a>
+    </div>
+  ) : (
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Breadcrumb -->
+      <nav class="mb-8">
+        <ol class="flex items-center space-x-2 text-sm text-gray-500">
+          <li><a href="/" class="hover:text-gray-700">Inicio</a></li>
+          <li><span>→</span></li>
+          <li><a href="/products" class="hover:text-gray-700">Productos</a></li>
+          <li><span>→</span></li>
+          <li class="text-gray-900">{product.name}</li>
+        </ol>
+      </nav>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Product Image -->
+        <div class="space-y-4">
+          <div class="aspect-square rounded-lg overflow-hidden bg-gray-100">
+            <img 
+              src={product.image_url || 'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=800'} 
+              alt={product.name}
+              class="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="space-y-6">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
+            <p class="text-gray-600 text-lg leading-relaxed">{product.description}</p>
+          </div>
+
+          <!-- Seller Info -->
+          <div class="border-t pt-6">
+            <h3 class="text-sm font-medium text-gray-900 mb-2">Vendedor</h3>
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                <span class="text-sm font-medium text-gray-700">
+                  {product.seller?.nombre?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div>
+                <p class="font-medium text-gray-900">{product.seller?.nombre || 'Usuario'}</p>
+                <p class="text-sm text-gray-500">Miembro desde {new Date(product.seller?.createdAt || Date.now()).getFullYear()}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Auction Section -->
+          {product.Auction ? (
+            <div id="auction-section" class="border-t pt-6">
+              <div class="bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-xl font-semibold text-gray-900">Subasta Activa</h3>
+                  <span class={`px-3 py-1 rounded-full text-sm font-medium ${
+                    product.Auction.status === 'active' 
+                      ? 'bg-success-100 text-success-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {product.Auction.status === 'active' ? 'Activa' : 'Finalizada'}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <p class="text-sm text-gray-600">Precio actual</p>
+                    <p class="text-2xl font-bold text-primary-600">
+                      ${product.Auction.current_price.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-sm text-gray-600">Tiempo restante</p>
+                    <p id="countdown" class="text-lg font-semibold text-gray-900"></p>
+                  </div>
+                </div>
+
+                <!-- Bidding Form -->
+                {product.Auction.status === 'active' && (
+                  <div id="bid-form-container">
+                    <form id="bid-form" class="space-y-4">
+                      <div>
+                        <label for="bid-amount" class="block text-sm font-medium text-gray-700 mb-1">
+                          Tu oferta (mínimo ${(product.Auction.current_price + 1).toLocaleString()})
+                        </label>
+                        <input 
+                          type="number" 
+                          id="bid-amount" 
+                          name="amount" 
+                          min={product.Auction.current_price + 1}
+                          step="0.01"
+                          required
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                          placeholder={`${product.Auction.current_price + 1}`}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label for="bid-message" class="block text-sm font-medium text-gray-700 mb-1">
+                          Mensaje (opcional)
+                        </label>
+                        <textarea 
+                          id="bid-message" 
+                          name="message" 
+                          rows="2"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                          placeholder="Añade un mensaje a tu oferta..."
+                        ></textarea>
+                      </div>
+
+                      <button 
+                        type="submit" 
+                        id="bid-button"
+                        class="w-full bg-primary-500 text-white py-3 px-4 rounded-lg hover:bg-primary-600 transition-colors font-medium"
+                      >
+                        Hacer Oferta
+                      </button>
+                    </form>
+
+                    <div id="auth-required" class="hidden text-center py-4">
+                      <p class="text-gray-600 mb-4">Debes iniciar sesión para hacer una oferta</p>
+                      <div class="space-x-4">
+                        <a href="/login" class="bg-primary-500 text-white px-6 py-2 rounded-lg hover:bg-primary-600 transition-colors">
+                          Iniciar Sesión
+                        </a>
+                        <a href="/register" class="text-primary-600 hover:text-primary-500">
+                          Registrarse
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div class="border-t pt-6">
+              <div class="bg-gray-50 rounded-lg p-6 text-center">
+                <p class="text-gray-600">Este producto no tiene una subasta activa</p>
+              </div>
+            </div>
+          )}
+
+          <!-- Bids History -->
+          {product.Auction?.bids && product.Auction.bids.length > 0 && (
+            <div class="border-t pt-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Historial de Ofertas</h3>
+              <div class="space-y-3 max-h-64 overflow-y-auto">
+                {product.Auction.bids.map((bid, index) => (
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                      <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                        <span class="text-xs font-medium text-gray-700">
+                          {bid.bidder?.nombre?.charAt(0).toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                      <div>
+                        <p class="font-medium text-gray-900">{bid.bidder?.nombre || 'Usuario'}</p>
+                        {bid.message && (
+                          <p class="text-sm text-gray-600">"{bid.message}"</p>
+                        )}
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-bold text-primary-600">${bid.amount.toLocaleString()}</p>
+                      <p class="text-xs text-gray-500">
+                        {new Date(bid.createdAt).toLocaleDateString()} {new Date(bid.createdAt).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )}
+</Layout>
+
+<script define:vars={{ product }}>
+  import { $user, $token } from '../../stores/authStore.js';
+  import { api } from '../../services/api.js';
+
+  // Check authentication status
+  function checkAuth() {
+    const token = $token.get();
+    const user = $user.get();
+    
+    const bidFormContainer = document.getElementById('bid-form-container');
+    const authRequired = document.getElementById('auth-required');
+    
+    if (token && user) {
+      bidFormContainer?.classList.remove('hidden');
+      authRequired?.classList.add('hidden');
+    } else {
+      bidFormContainer?.classList.add('hidden');
+      authRequired?.classList.remove('hidden');
+    }
+  }
+
+  // Update countdown
+  function updateCountdown() {
+    if (!product.Auction || product.Auction.status !== 'active') return;
+    
+    const endTime = new Date(product.Auction.end_time);
+    const now = new Date();
+    const diff = endTime.getTime() - now.getTime();
+    
+    const countdownEl = document.getElementById('countdown');
+    if (!countdownEl) return;
+    
+    if (diff <= 0) {
+      countdownEl.textContent = 'Subasta finalizada';
+      countdownEl.className = 'text-lg font-semibold text-error-600';
+      // Hide bid form
+      document.getElementById('bid-form-container')?.classList.add('hidden');
+      return;
+    }
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    let timeString = '';
+    if (days > 0) {
+      timeString = `${days}d ${hours}h ${minutes}m`;
+    } else if (hours > 0) {
+      timeString = `${hours}h ${minutes}m ${seconds}s`;
+    } else {
+      timeString = `${minutes}m ${seconds}s`;
+      countdownEl.className = 'text-lg font-semibold text-error-600 animate-pulse';
+    }
+    
+    countdownEl.textContent = timeString;
+  }
+
+  // Handle bid submission
+  const bidForm = document.getElementById('bid-form');
+  const bidButton = document.getElementById('bid-button');
+  
+  bidForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const token = $token.get();
+    if (!token) {
+      alert('Debes iniciar sesión para hacer una oferta');
+      return;
+    }
+    
+    const formData = new FormData(e.target);
+    const amount = parseFloat(formData.get('amount'));
+    const message = formData.get('message');
+    
+    if (amount <= product.Auction.current_price) {
+      alert(`Tu oferta debe ser mayor a $${product.Auction.current_price}`);
+      return;
+    }
+    
+    bidButton.disabled = true;
+    bidButton.textContent = 'Enviando oferta...';
+    
+    try {
+      await api.placeBid(product.Auction.id, amount, message, token);
+      alert('¡Oferta enviada exitosamente!');
+      window.location.reload();
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      bidButton.disabled = false;
+      bidButton.textContent = 'Hacer Oferta';
+    }
+  });
+
+  // Initialize
+  checkAuth();
+  updateCountdown();
+  
+  // Update countdown every second
+  if (product.Auction?.status === 'active') {
+    setInterval(updateCountdown, 1000);
+  }
+  
+  // Listen for auth changes
+  $token.subscribe(checkAuth);
+  $user.subscribe(checkAuth);
+</script>

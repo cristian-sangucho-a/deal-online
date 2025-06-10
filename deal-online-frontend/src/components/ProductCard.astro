@@ -1,0 +1,144 @@
+---
+export interface Props {
+  product: {
+    id: number;
+    name: string;
+    description: string;
+    image_url?: string;
+    Auction?: {
+      id: number;
+      current_price: number;
+      end_time: string;
+      status: string;
+      _count?: {
+        bids: number;
+      };
+    };
+  };
+}
+
+const { product } = Astro.props;
+const hasAuction = product.Auction && product.Auction.status === 'active';
+const endTime = hasAuction ? new Date(product.Auction.end_time) : null;
+const isEnding = endTime && (endTime.getTime() - Date.now()) < 24 * 60 * 60 * 1000; // 24 hours
+---
+
+<div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+  <div class="relative">
+    <img 
+      src={product.image_url || 'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=800'} 
+      alt={product.name}
+      class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+    />
+    
+    {hasAuction && (
+      <div class="absolute top-3 left-3">
+        {isEnding ? (
+          <span class="bg-error-500 text-white px-2 py-1 rounded-full text-xs font-medium animate-pulse">
+            ¡Termina Pronto!
+          </span>
+        ) : (
+          <span class="bg-success-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+            Activa
+          </span>
+        )}
+      </div>
+    )}
+    
+    {product.Auction?._count?.bids && (
+      <div class="absolute top-3 right-3 bg-black/70 text-white px-2 py-1 rounded-full text-xs">
+        {product.Auction._count.bids} ofertas
+      </div>
+    )}
+  </div>
+
+  <div class="p-4">
+    <h3 class="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+      {product.name}
+    </h3>
+    
+    <p class="text-gray-600 text-sm mb-3 line-clamp-2">
+      {product.description}
+    </p>
+
+    {hasAuction && (
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-gray-500">Precio actual:</span>
+          <span class="text-xl font-bold text-primary-600">
+            ${product.Auction.current_price.toLocaleString()}
+          </span>
+        </div>
+        
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-gray-500">Termina:</span>
+          <span class={`font-medium ${isEnding ? 'text-error-600' : 'text-gray-700'}`}>
+            <span id={`countdown-${product.id}`}></span>
+          </span>
+        </div>
+        
+        <div class="mt-4">
+          <a 
+            href={`/products/${product.id}`}
+            class="w-full bg-primary-500 text-white py-2 px-4 rounded-lg hover:bg-primary-600 transition-colors text-center block font-medium"
+          >
+            Ver Detalles
+          </a>
+        </div>
+      </div>
+    )}
+
+    {!hasAuction && (
+      <div class="mt-4">
+        <a 
+          href={`/products/${product.id}`}
+          class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-center block font-medium"
+        >
+          Ver Producto
+        </a>
+      </div>
+    )}
+  </div>
+</div>
+
+{hasAuction && (
+  <script define:vars={{ productId: product.id, endTime: product.Auction.end_time }}>
+    function updateCountdown() {
+      const endDate = new Date(endTime);
+      const now = new Date();
+      const diff = endDate.getTime() - now.getTime();
+      
+      const countdownEl = document.getElementById(`countdown-${productId}`);
+      if (!countdownEl) return;
+      
+      if (diff <= 0) {
+        countdownEl.textContent = 'Finalizada';
+        return;
+      }
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (days > 0) {
+        countdownEl.textContent = `${days}d ${hours}h`;
+      } else if (hours > 0) {
+        countdownEl.textContent = `${hours}h ${minutes}m`;
+      } else {
+        countdownEl.textContent = `${minutes}m`;
+      }
+    }
+    
+    updateCountdown();
+    setInterval(updateCountdown, 60000); // Update every minute
+  </script>
+)}
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

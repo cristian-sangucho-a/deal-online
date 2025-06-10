@@ -1,0 +1,125 @@
+---
+import { $user, $token } from '../stores/authStore.js';
+---
+
+<header class="bg-white shadow-sm border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <!-- Logo -->
+      <div class="flex items-center">
+        <a href="/" class="flex items-center space-x-2">
+          <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-accent-500 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+            </svg>
+          </div>
+          <span class="text-xl font-bold text-gray-900">Deal Online</span>
+        </a>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="hidden md:flex items-center space-x-8">
+        <a href="/" class="text-gray-700 hover:text-primary-600 transition-colors">Inicio</a>
+        <a href="/auctions" class="text-gray-700 hover:text-primary-600 transition-colors">Subastas</a>
+        <a href="/products" class="text-gray-700 hover:text-primary-600 transition-colors">Productos</a>
+      </nav>
+
+      <!-- Auth buttons -->
+      <div class="flex items-center space-x-4">
+        <div id="auth-buttons">
+          <!-- This will be populated by client-side script -->
+        </div>
+        
+        <!-- Mobile menu button -->
+        <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-gray-700 hover:text-primary-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="md:hidden hidden border-t border-gray-200">
+    <div class="px-2 pt-2 pb-3 space-y-1">
+      <a href="/" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Inicio</a>
+      <a href="/auctions" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Subastas</a>
+      <a href="/products" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Productos</a>
+    </div>
+  </div>
+</header>
+
+<script>
+  import { $user, $token, authActions } from '../stores/authStore.js';
+
+  function renderAuthButtons() {
+    const authButtonsContainer = document.getElementById('auth-buttons');
+    const user = $user.get();
+    const token = $token.get();
+
+    if (!authButtonsContainer) return;
+
+    if (user && token) {
+      authButtonsContainer.innerHTML = `
+        <div class="flex items-center space-x-4">
+          <a href="/dashboard" class="text-gray-700 hover:text-primary-600 transition-colors">
+            Dashboard
+          </a>
+          <a href="/create-product" class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors">
+            Vender
+          </a>
+          <div class="relative group">
+            <button class="flex items-center space-x-2 text-gray-700 hover:text-primary-600">
+              <span class="font-medium">${user.nombre}</span>
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </button>
+            <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
+              <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</a>
+              <a href="/my-auctions" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mis Subastas</a>
+              <a href="/my-bids" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mis Ofertas</a>
+              <button id="logout-btn" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const logoutBtn = document.getElementById('logout-btn');
+      logoutBtn?.addEventListener('click', async () => {
+        await authActions.logout();
+        window.location.href = '/';
+      });
+    } else {
+      authButtonsContainer.innerHTML = `
+        <div class="flex items-center space-x-4">
+          <a href="/login" class="text-gray-700 hover:text-primary-600 transition-colors">
+            Iniciar Sesión
+          </a>
+          <a href="/register" class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors">
+            Registrarse
+          </a>
+        </div>
+      `;
+    }
+  }
+
+  // Initial render
+  renderAuthButtons();
+
+  // Listen for auth state changes
+  $user.subscribe(() => renderAuthButtons());
+  $token.subscribe(() => renderAuthButtons());
+
+  // Mobile menu toggle
+  const mobileMenuButton = document.getElementById('mobile-menu-button');
+  const mobileMenu = document.getElementById('mobile-menu');
+
+  mobileMenuButton?.addEventListener('click', () => {
+    mobileMenu?.classList.toggle('hidden');
+  });
+</script>
+</header>
