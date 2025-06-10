@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { logger } from './src/utils/logger.js';
 import authRoutes from './src/routes/auth.routes.js';
+import auctionRoutes from './src/routes/auction.routes.js';
+import setupAssociations from './src/models/associations.js';
 import verifyToken from './src/middlewares/auth.middleware.js';
 import sequelize from './src/config/db.js';
 
@@ -29,11 +31,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // Conexión a la base de datos
 sequelize.sync({ alter: true })
-    .then(() => console.log('✅ Base de datos conectada y sincronizada'))
+    .then(() => {
+        console.log('✅ Base de datos conectada y sincronizada');
+        setupAssociations(); // ¡Aquí!
+    })
     .catch(err => console.error('❌ Error de conexión a la DB:', err));
 
 // Rutas
 app.use('/api/auth', authRoutes);
+app.use('/api', auctionRoutes);
 
 
 app.get('/api/protected', verifyToken, (req, res) => {
