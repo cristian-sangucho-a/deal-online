@@ -111,21 +111,20 @@ export const api = {
     return this.request("/products/my-products", "GET", null, token);
   },
 
-  // Auction endpoints
-  async getActiveAuctions(page = 1, limit = 12) {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-    });
-    return this.request(`/auctions/active?${params.toString()}`);
-  },
-
   async getAuctionById(id) {
     return this.request(`/auctions/${id}`);
   },
 
   async closeAuction(auctionId, token) {
     return this.request(`/auctions/${auctionId}/close`, "POST", null, token);
+  },
+
+  async getActiveAuctions(page = 1, limit = 12) {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    return this.request(`/auctions/active?${params.toString()}`);
   },
 
   // Bid endpoints
