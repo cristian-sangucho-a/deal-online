@@ -1,7 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import Product from './Product.js';
-import Bid from './Bid.js';
 
 const Auction = sequelize.define('Auction', {
     id: {
@@ -12,10 +10,6 @@ const Auction = sequelize.define('Auction', {
     product_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-            model: Product,
-            key: 'id',
-        },
     },
     start_time: {
         type: DataTypes.DATE,
@@ -41,18 +35,11 @@ const Auction = sequelize.define('Auction', {
     winning_bid_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        references: {
-            model: Bid,
-            key: 'id',
-        },
     },
 }, {
     tableName: 'auctions',
     timestamps: true,
     underscored: true,
 });
-
-Auction.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
-Auction.belongsTo(Bid, { foreignKey: 'winning_bid_id', as: 'winning_bid' });
 
 export default Auction;

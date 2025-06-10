@@ -22,7 +22,7 @@ class AuctionService {
             current_price: starting_price,
         });
 
-        const users = await User.findAll({ where: { is_verified: true, 'notification_preferences.new_auction': true } });
+        const users = await User.findAll({ where: { is_verified: true } });
         for (const user of users) {
             await emailService.sendNewAuctionNotification(user.email, auction.id, product.name);
         }
@@ -34,7 +34,16 @@ class AuctionService {
         return await Product.findAll({
             include: [
                 { model: User, as: 'seller', attributes: ['id', 'nombre', 'email'] },
-                { model: Auction, as: 'Auction', attributes: ['id', 'status', 'current_price', 'end_time', 'winning_bid_id'], include: [{ model: Bid, as: 'winning_bid', include: [{ model: User, as: 'bidder' }] }] },
+                { 
+                    model: Auction, 
+                    as: 'auction', 
+                    attributes: ['id', 'status', 'current_price', 'end_time', 'winning_bid_id'],
+                    include: [{ 
+                        model: Bid, 
+                        as: 'winning_bid', 
+                        include: [{ model: User, as: 'bidder' }] 
+                    }] 
+                },
             ],
         });
     }
@@ -43,7 +52,22 @@ class AuctionService {
         const product = await Product.findByPk(productId, {
             include: [
                 { model: User, as: 'seller', attributes: ['id', 'nombre', 'email'] },
-                { model: Auction, as: 'Auction', include: [{ model: Bid, as: 'bids', include: [{ model: User, as: 'bidder' }], model: Bid, as: 'winning_bid' }] },
+                { 
+                    model: Auction, 
+                    as: 'auction',
+                    include: [
+                        { 
+                            model: Bid, 
+                            as: 'bids',
+                            include: [{ model: User, as: 'bidder' }]
+                        },
+                        {
+                            model: Bid,
+                            as: 'winning_bid',
+                            include: [{ model: User, as: 'bidder' }]
+                        }
+                    ]
+                },
             ],
         });
         if (!product) throw new CustomError('Producto no encontrado', 404);
@@ -86,8 +110,6 @@ class AuctionService {
 
         const user = await User.findByPk(userId);
         if (!user) throw new CustomError('Usuario no encontrado', 404);
-        if (user.balance < amount) throw new CustomError('Saldo insuficiente', 400);
-
         const bid = await Bid.create({
             auction_id: auctionId,
             user_id: userId,
@@ -96,7 +118,7 @@ class AuctionService {
 
         await auction.update({ current_price: amount });
 
-        const users = await User.findAll({ where: { is_verified: true, 'notification_preferences.new_bid': true } });
+        const users = await User.findAll({ where: { is_verified: true } });
         for (const user of users) {
             if (user.id !== userId) {
                 await emailService.sendBidNotification(user.email, auction.id, auction.product.name, amount, user.nombre);
@@ -106,7 +128,7 @@ class AuctionService {
         return { bid, auction };
     }
 
-    async closeAuction(auctionId, adminId = null) {
+    async closeAuction(auctionId) {
         const auction = await Auction.findByPk(auctionId, {
             include: [
                 { model: Product, as: 'product', include: [{ model: User, as: 'seller' }] },
@@ -116,14 +138,9 @@ class AuctionService {
         if (!auction) throw new CustomError('Subasta no encontrada', 404);
         if (auction.status !== 'active') throw new CustomError('La subasta ya está cerrada o cancelada', 400);
 
-        if (adminId) {
-            const admin = await User.findByPk(adminId);
-            if (!admin || admin.role !== 'admin') throw new CustomError('Se requiere rol de administrador', 403);
-        }
-
         let winningBid = null;
         if (auction.bids && auction.bids.length > 0) {
-            winningBid = auction.bids[0]; // Oferta más alta
+            winningBid = auction.bids[0];
             await auction.update({ winning_bid_id: winningBid.id, status: 'closed' });
         } else {
             await auction.update({ status: 'closed' });
@@ -132,12 +149,8 @@ class AuctionService {
         if (winningBid) {
             const winner = winningBid.bidder;
             const seller = auction.product.seller;
-            if (winner.notification_preferences.auction_closed) {
-                await emailService.sendAuctionClosedNotification(winner.email, auction.id, auction.product.name, true, winningBid.amount);
-            }
-            if (seller.notification_preferences.auction_closed) {
-                await emailService.sendAuctionClosedNotification(seller.email, auction.id, auction.product.name, false, winningBid.amount);
-            }
+            await emailService.sendAuctionClosedNotification(winner.email, auction.id, auction.product.name, true, winningBid.amount);
+            await emailService.sendAuctionClosedNotification(seller.email, auction.id, auction.product.name, false, winningBid.amount);
         }
 
         return { auction, winningBid };

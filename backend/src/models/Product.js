@@ -1,6 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import User from './User.js';
 
 const Product = sequelize.define('Product', {
     id: {
@@ -30,17 +29,11 @@ const Product = sequelize.define('Product', {
     user_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-            model: User,
-            key: 'id',
-        },
     },
 }, {
     tableName: 'products',
     timestamps: true,
     underscored: true,
 });
-
-Product.belongsTo(User, { foreignKey: 'user_id', as: 'seller' });
 
 export default Product;

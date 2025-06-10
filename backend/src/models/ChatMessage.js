@@ -1,7 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import User from './User.js';
-import Auction from './Auction.js';
 
 const ChatMessage = sequelize.define('ChatMessage', {
     id: {
@@ -12,18 +10,10 @@ const ChatMessage = sequelize.define('ChatMessage', {
     auction_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-            model: Auction,
-            key: 'id',
-        },
     },
     user_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-            model: User,
-            key: 'id',
-        },
     },
     message: {
         type: DataTypes.TEXT,
@@ -43,8 +33,5 @@ const ChatMessage = sequelize.define('ChatMessage', {
     timestamps: true,
     underscored: true,
 });
-
-ChatMessage.belongsTo(User, { foreignKey: 'user_id', as: 'sender' });
-ChatMessage.belongsTo(Auction, { foreignKey: 'auction_id', as: 'auction' });
 
 export default ChatMessage;
