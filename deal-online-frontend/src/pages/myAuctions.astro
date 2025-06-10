@@ -1,0 +1,127 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+---
+
+<Layout title="Mis Subastas - Deal Online">
+    <Header />
+
+    <div class="min-h-screen bg-gray-50">
+        <div
+            id="auth-check"
+            class="hidden min-h-screen flex items-center justify-center"
+        >
+            <div class="text-center">
+                <div
+                    class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"
+                >
+                </div>
+                <p class="text-gray-600">Verificando autenticación...</p>
+            </div>
+        </div>
+
+        <div
+            id="content"
+            class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        >
+            <h1 class="text-3xl font-bold mb-6 text-gray-900">Mis Subastas</h1>
+
+            <div id="auctions-list" class="space-y-4">
+                <!-- Aquí se listarán las subastas -->
+                <div class="text-center py-8 text-gray-500" id="loading">
+                    <div
+                        class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"
+                    >
+                    </div>
+                    Cargando tus subastas...
+                </div>
+            </div>
+        </div>
+    </div>
+</Layout>
+
+<script>
+    import { $user, $token } from "../stores/authStore.js";
+    import { api } from "../services/api.js";
+
+    const authCheck = document.getElementById("auth-check");
+    const content = document.getElementById("content");
+    const auctionsList = document.getElementById("auctions-list");
+    const loading = document.getElementById("loading");
+
+    async function checkAuthentication() {
+        const token = $token.get();
+        const user = $user.get();
+
+        if (!token || !user) {
+            if (authCheck) authCheck.classList.remove("hidden");
+            if (content) content.classList.add("hidden");
+
+            setTimeout(() => {
+                window.location.href =
+                    "/login?redirect=" +
+                    encodeURIComponent(window.location.pathname);
+            }, 1000);
+            return false;
+        }
+
+        if (authCheck) authCheck.classList.add("hidden");
+        if (content) content.classList.remove("hidden");
+
+        return true;
+    }
+
+    async function loadMyAuctions() {
+        try {
+            const token = $token.get();
+            if (!token) return;
+
+            const auctions = await api.getUserAuctions(token);
+
+            if (!auctions || auctions.length === 0) {
+                auctionsList.innerHTML = `
+          <p class="text-center text-gray-500 py-12">No tienes subastas activas o publicadas.</p>
+        `;
+                return;
+            }
+
+            // Render auctions
+            auctionsList.innerHTML = auctions
+                .map(
+                    (auction) => `
+        <div class="bg-white rounded-lg shadow p-6 flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900">${auction.Product?.name || "Producto sin nombre"}</h2>
+            <p class="text-sm text-gray-600">Estado: <span class="font-medium">${auction.status}</span></p>
+            <p class="text-sm text-gray-600">Precio inicial: $${auction.start_price.toLocaleString()}</p>
+            <p class="text-sm text-gray-600">Fecha de inicio: ${new Date(auction.start_date).toLocaleDateString()}</p>
+            <p class="text-sm text-gray-600">Fecha de cierre: ${new Date(auction.end_date).toLocaleDateString()}</p>
+          </div>
+          <a href="/auctions/${auction.id}" class="text-primary-600 hover:text-primary-500 font-semibold">Ver detalles →</a>
+        </div>
+      `,
+                )
+                .join("");
+        } catch (error) {
+            console.error("Error cargando subastas:", error);
+            auctionsList.innerHTML = `
+        <p class="text-center text-red-500 py-12">Error al cargar tus subastas. Intenta nuevamente más tarde.</p>
+      `;
+        }
+    }
+
+    async function init() {
+        const authenticated = await checkAuthentication();
+        if (authenticated) {
+            await loadMyAuctions();
+        }
+    }
+
+    $token.subscribe(async (token) => {
+        if (token) {
+            await init();
+        }
+    });
+
+    init();
+</script>
