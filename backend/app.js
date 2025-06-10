@@ -7,11 +7,29 @@ import { logger } from './src/utils/logger.js';
 import authRoutes from './src/routes/auth.routes.js';
 import verifyToken from './src/middlewares/auth.middleware.js';
 import sequelize from './src/config/db.js';
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { setupSocketHandlers } from './src/socket/socketHandlers.js';
+import { handleHttpError } from './src/utils/httpErrorHandler.js'; // Asegúrate de que existe
+
+
 
 // Configuración del puerto
 const PORT = process.env.PORT || 3500;
+const WEBSOCKET_PORT = process.env.WEBSOCKET_PORT || 3501;
 
 const app = express();
+// _________________________________________________
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || "*",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  transports: ["websocket", "polling"],
+});
+  
 
 // 1. Configuración de Seguridad
 app.use(helmet());
@@ -32,6 +50,9 @@ sequelize.sync({ alter: true })
     .then(() => console.log('✅ Base de datos conectada y sincronizada'))
     .catch(err => console.error('❌ Error de conexión a la DB:', err));
 
+// Configurar manejadores de Socket.IO
+setupSocketHandlers(io);
+
 // Rutas
 app.use('/api/auth', authRoutes);
 
@@ -42,18 +63,24 @@ app.get('/api/protected', verifyToken, (req, res) => {
 
 // Health check mejorado
 const healthResponse = async (req, res) => {
-    const dbStatus = await sequelize.authenticate()
-        .then(() => 'connected')
-        .catch(() => 'disconnected');
-    res.status(200).json({
-        status: "OK",
-        dbStatus,
-        timestamp: new Date().toISOString(),
-        service: "Inventory Prediction API",
-        version: process.env.npm_package_version,
-        environment: process.env.NODE_ENV || 'development',
-        port: PORT
-    });
+  const dbStatus = await sequelize
+    .authenticate()
+    .then(() => "connected")
+    .catch(() => "disconnected");
+
+  const connectedClients = io.sockets.sockets.size;
+
+  res.status(200).json({
+    status: "OK",
+    dbStatus,
+    websocketStatus: "active",
+    connectedClients,
+    timestamp: new Date().toISOString(),
+    service: "Deal Online API",
+    version: process.env.npm_package_version,
+    environment: process.env.NODE_ENV || "development",
+    port: PORT,
+  });
 };
 
 app.get('/health', healthResponse);
@@ -73,5 +100,11 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
+
+// Iniciar servidor WebSocket
+server.listen(WEBSOCKET_PORT, () => {
+    console.log(`🔌 Servidor WebSocket corriendo en ws://localhost:${WEBSOCKET_PORT}`);
+});
+
 
 export default app;
