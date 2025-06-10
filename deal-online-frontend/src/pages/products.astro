@@ -6,11 +6,9 @@ import Footer from "../components/Footer.astro";
 import ProductCard from "../components/ProductCard.astro";
 import { api } from "../services/api.js";
 
-// Obtener parámetros de búsqueda
+// Obtener parámetros de búsqueda (solo paginación)
 const searchParams = Astro.url.searchParams;
 const page = parseInt(searchParams.get('page') || '1');
-const search = searchParams.get('search') || '';
-const category = searchParams.get('category') || '';
 
 // Variables
 let products = [];
@@ -18,9 +16,8 @@ let totalPages = 1;
 let error = null;
 
 try {
-  // Llama a la API del backend: /products?page=1&limit=12&search=...&category=...
-  const response = await api.getAllProducts(page, 12, search, category);
-
+  // Obtener todos los productos sin filtros
+  const response = await api.getAllProducts(page, 12);
   products = response.products || [];
   totalPages = Math.ceil((response.total || 0) / 12);
 } catch (err) {
@@ -48,7 +45,6 @@ try {
       </div>
     </div>
 
-
     <!-- Resultados -->
     {error ? (
       <div class="text-center py-12 text-error-500">
@@ -58,11 +54,8 @@ try {
       </div>
     ) : products.length === 0 ? (
       <div class="text-center py-12 text-gray-600">
-        <h2 class="text-xl font-semibold mb-2">No se encontraron productos</h2>
-        <p class="mb-4">{search || category ? 'Intenta ajustar tus filtros de búsqueda' : 'Aún no hay productos disponibles'}</p>
-        {(search || category) && (
-          <a href="/products" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600">Ver todos los productos</a>
-        )}
+        <h2 class="text-xl font-semibold mb-2">No hay productos disponibles</h2>
+        <p class="mb-4">Vuelve pronto para ver nuevas subastas.</p>
       </div>
     ) : (
       <>
@@ -75,13 +68,13 @@ try {
           <div class="flex justify-center mt-6">
             <nav class="flex space-x-2">
               {page > 1 && (
-                <a href={`/products?page=${page - 1}${search ? `&search=${encodeURIComponent(search)}` : ''}${category ? `&category=${category}` : ''}`} class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">← Anterior</a>
+                <a href={`/products?page=${page - 1}`} class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">← Anterior</a>
               )}
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 const pageNum = Math.max(1, Math.min(totalPages - 4, page - 2)) + i;
                 return (
                   <a 
-                    href={`/products?page=${pageNum}${search ? `&search=${encodeURIComponent(search)}` : ''}${category ? `&category=${category}` : ''}`}
+                    href={`/products?page=${pageNum}`}
                     class={`px-3 py-2 rounded-md ${pageNum === page ? 'bg-primary-500 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
                   >
                     {pageNum}
@@ -89,7 +82,7 @@ try {
                 );
               })}
               {page < totalPages && (
-                <a href={`/products?page=${page + 1}${search ? `&search=${encodeURIComponent(search)}` : ''}${category ? `&category=${category}` : ''}`} class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">Siguiente →</a>
+                <a href={`/products?page=${page + 1}`} class="px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md">Siguiente →</a>
               )}
             </nav>
           </div>
@@ -97,5 +90,5 @@ try {
       </>
     )}
   </div>
-    <Footer />
+  <Footer />
 </Layout>
