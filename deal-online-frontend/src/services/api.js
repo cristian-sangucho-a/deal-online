@@ -80,11 +80,18 @@ export const api = {
   },
 
   async verifyResetCode(email, verificationCode) {
-    return this.request("/auth/verify-reset-code", "POST", { email, verificationCode });
+    return this.request("/auth/verify-reset-code", "POST", {
+      email,
+      verificationCode,
+    });
   },
 
   async resetPassword(email, verificationCode, newPassword) {
-    return this.request("/auth/reset-password", "POST", { email, verificationCode, newPassword });
+    return this.request("/auth/reset-password", "POST", {
+      email,
+      verificationCode,
+      newPassword,
+    });
   },
 
   // Product endpoints
@@ -99,7 +106,9 @@ export const api = {
     if (params.search) queryParams.append("search", params.search);
     if (params.category) queryParams.append("category", params.category);
     if (params.status) queryParams.append("status", params.status);
-    const endpoint = `/products${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
+    const endpoint = `/products${
+      queryParams.toString() ? "?" + queryParams.toString() : ""
+    }`;
     try {
       const response = await this.request(endpoint, "GET");
       if (Array.isArray(response)) {
@@ -132,6 +141,9 @@ export const api = {
     return this.request(`/products/${id}`, "DELETE", null, token);
   },
 
+  async getAuctionById(id) {
+    return this.request(`/auctions/${id}`);
+  },
   async getAuctionById(id) {
     return this.request(`/auctions/${id}`);
   },
@@ -184,16 +196,30 @@ export const api = {
   },
 
   // Chat endpoints
-  async sendChatMessage(auctionId, message, isBid = false, bidAmount = null, token) {
-    return this.request('/chat', 'POST', {
-      auction_id: auctionId,
-      message,
-      is_bid: isBid,
-      bid_amount: bidAmount
-    }, token);
+  async sendChatMessage(
+    auctionId,
+    message,
+    isBid = false,
+    bidAmount = null,
+    token
+  ) {
+    return this.request(
+      "/chat",
+      "POST",
+      {
+        auction_id: auctionId,
+        message,
+        is_bid: isBid,
+        bid_amount: bidAmount,
+      },
+      token
+    );
   },
 
-  async sendChatMessage(token, { auction_id, message, bid_amount = null, is_bid = false }) {
+  async sendChatMessage(
+    token,
+    { auction_id, message, bid_amount = null, is_bid = false }
+  ) {
     return this.request(
       "/chat",
       "POST",
@@ -209,10 +235,10 @@ export const api = {
 
   // User endpoints
   async getUserProfile(token) {
-    return this.request('/users/profile', 'GET', null, token);
+    return this.request("/users/profile", "GET", null, token);
   },
 
   async updateUserProfile(userData, token) {
-    return this.request('/users/profile', 'PUT', userData, token);
+    return this.request("/users/profile", "PUT", userData, token);
   },
 };

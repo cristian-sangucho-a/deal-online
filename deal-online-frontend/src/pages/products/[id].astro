@@ -22,8 +22,6 @@ const { id } = Astro.params;
 const { product } = Astro.props;
 
 let finalProduct = product;
-console.log("Product from props:", finalProduct);
-console.log("Product ID from params:", finalProduct.auction.status);
 let error = null;
 
 if (!finalProduct) {

@@ -1,7 +1,8 @@
 ---
+export const prerender = false;
+
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
-import AuctionChat from '../../components/AuctionChat.astro';
 import { api } from '../../services/api.js';
 
 const { auctionId } = Astro.params;
@@ -9,25 +10,26 @@ const { auctionId } = Astro.params;
 let auction = null;
 let error = null;
 
-try {
-  auction = await api.getAuctionById(auctionId);
-} catch (err) {
-  error = err.message;
-}
+console.log('🔍 Attempting to load auction with ID:', auctionId);
+auction = await api.getAuctionById(auctionId);
+console.log(auction);
+
 
 if (!auction && !error) {
+  console.log('🚫 No auction found and no error, redirecting to 404');
   return Astro.redirect('/404');
 }
 ---
 
-<Layout title={auction ? `Chat - ${auction.Product?.name || 'Subasta'}` : 'Chat no encontrado'}>
+<Layout title={auction ? `Chat - ${auction.product?.name || 'Subasta'}` : 'Chat no encontrado'}>
   <Header />
   
   {error ? (
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
       <h1 class="text-2xl font-bold text-gray-900 mb-4">Error al cargar el chat</h1>
       <p class="text-gray-600 mb-6">{error}</p>
-      <a href="/auctions" class="text-primary-600 hover:text-primary-500">← Volver a subastas</a>
+      <p class="text-sm text-gray-500 mb-4">Auction ID: {auctionId}</p>
+      <a href="/products" class="text-primary-600 hover:text-primary-500">← Volver a productos</a>
     </div>
   ) : (
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -37,55 +39,36 @@ if (!auction && !error) {
           <ol class="flex items-center space-x-2 text-sm text-gray-500">
             <li><a href="/" class="hover:text-gray-700">Inicio</a></li>
             <li><span>→</span></li>
-            <li><a href="/auctions" class="hover:text-gray-700">Subastas</a></li>
+            <li><a href="/products" class="hover:text-gray-700">Productos</a></li>
             <li><span>→</span></li>
-            <li class="text-gray-900">Chat</li>
+            <li class="text-gray-900">Chat de Subasta</li>
           </ol>
         </nav>
-
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">
-              Chat de Subasta: {auction.Product?.name || 'Producto'}
-            </h1>
-            <p class="text-gray-600 mt-1">
-              Precio actual: ${auction.current_price.toLocaleString()} • 
-              Estado: <span class={`font-medium ${
-                auction.status === 'active' ? 'text-success-600' : 'text-gray-600'
-              }`}>
-                {auction.status === 'active' ? 'Activa' : 'Finalizada'}
-              </span>
-            </p>
-          </div>
-          
-          <a 
-            href={`/products/${auction.Product?.id}`}
-            class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
-          >
-            Ver Producto
-          </a>
-        </div>
       </div>
 
-      <!-- Auction Summary Card -->
+      <!-- Auction Info Card -->
       <div class="bg-white rounded-lg shadow-sm border p-6 mb-6">
         <div class="flex items-start space-x-4">
           <img 
-            src={auction.Product?.image_url || 'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=200'} 
-            alt={auction.Product?.name || 'Producto'}
+            src={auction.product?.image_url || 'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=200'} 
+            alt={auction.product?.name || 'Producto'}
             class="w-20 h-20 object-cover rounded-lg"
           />
           <div class="flex-1">
-            <h3 class="font-semibold text-lg text-gray-900">{auction.Product?.name}</h3>
-            <p class="text-gray-600 text-sm mt-1 line-clamp-2">{auction.Product?.description}</p>
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">
+              {auction.product?.name || 'Producto'}
+            </h1>
+            <p class="text-gray-600 text-sm mb-3 line-clamp-2">{auction.product?.description || 'Sin descripción'}</p>
             
-            <div class="flex items-center space-x-6 mt-3">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <span class="text-sm text-gray-500">Precio actual</span>
-                <p class="font-bold text-xl text-primary-600">${auction.current_price.toLocaleString()}</p>
+                <p id="current-price" class="font-bold text-xl text-primary-600">
+                  ${parseFloat(auction.current_price || 0).toLocaleString()}
+                </p>
               </div>
               
-              {auction.status === 'active' && (
+              {auction.status === 'active' && auction.end_time && (
                 <div>
                   <span class="text-sm text-gray-500">Tiempo restante</span>
                   <p id="countdown" class="font-semibold text-gray-900"></p>
@@ -93,37 +76,132 @@ if (!auction && !error) {
               )}
               
               <div>
+                <span class="text-sm text-gray-500">Estado</span>
+                <p class={`font-medium ${
+                  auction.status === 'active' ? 'text-success-600' : 'text-gray-600'
+                }`}>
+                  {auction.status === 'active' ? 'Activa' : 'Finalizada'}
+                </p>
+              </div>
+              
+              <div>
                 <span class="text-sm text-gray-500">Vendedor</span>
-                <p class="font-medium text-gray-900">{auction.Product?.seller?.nombre || 'Usuario'}</p>
+                <p class="font-medium text-gray-900">{auction.product?.seller?.nombre || 'Usuario'}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Chat Component -->
-      <div class="h-[600px]">
-        <AuctionChat 
-          auctionId={auction.id} 
-          currentPrice={auction.current_price}
-          auctionStatus={auction.status}
-        />
+      <!-- Bid Form -->
+      {auction.status === 'active' && (
+        <div class="bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg p-6 mb-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">Hacer una Oferta</h2>
+          
+          <div id="auth-required" class="hidden text-center py-8">
+            <p class="text-gray-600 mb-4">Debes iniciar sesión para hacer ofertas</p>
+            <a href="/login" class="bg-primary-500 text-white px-6 py-2 rounded-lg hover:bg-primary-600 transition-colors">
+              Iniciar Sesión
+            </a>
+          </div>
+
+          <form id="bid-form" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="bid-amount" class="block text-sm font-medium text-gray-700 mb-1">
+                  Monto de la Oferta (mínimo: ${(parseFloat(auction.current_price) + 0.01).toFixed(2)})
+                </label>
+                <input
+                  type="number"
+                  id="bid-amount"
+                  step="0.01"
+                  min={(parseFloat(auction.current_price) + 0.01).toFixed(2)}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Ingresa tu oferta"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label for="bid-message" class="block text-sm font-medium text-gray-700 mb-1">
+                  Mensaje (opcional)
+                </label>
+                <input
+                  type="text"
+                  id="bid-message"
+                  maxlength="100"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Mensaje opcional"
+                />
+              </div>
+            </div>
+            
+            <button
+              type="submit"
+              id="bid-button"
+              class="w-full bg-primary-500 text-white py-3 px-4 rounded-lg hover:bg-primary-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Enviar Oferta
+            </button>
+          </form>
+        </div>
+      )}
+
+      <!-- Chat Section -->
+      <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div class="bg-gray-50 px-6 py-3 border-b">
+          <h2 class="text-lg font-semibold text-gray-900">Chat de la Subasta</h2>
+          <p class="text-sm text-gray-600">
+            <span id="connection-status" class="text-gray-500">Conectando...</span>
+            • <span id="user-count">0</span> usuarios conectados
+          </p>
+        </div>
+        
+        <!-- Messages Container -->
+        <div id="messages-container" class="h-96 overflow-y-auto p-4 space-y-3">
+          <div class="text-center text-gray-500 text-sm">
+            Cargando mensajes...
+          </div>
+        </div>
+        
+        <!-- Message Input -->
+        <div class="border-t bg-gray-50 p-4">
+          <div id="message-auth-required" class="hidden text-center text-gray-600">
+            <p>Debes iniciar sesión para participar en el chat</p>
+          </div>
+          
+          <form id="message-form" class="flex space-x-2">
+            <input
+              type="text"
+              id="message-input"
+              placeholder="Escribe un mensaje..."
+              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              maxlength="500"
+            />
+            <button
+              type="submit"
+              class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
+            >
+              Enviar
+            </button>
+          </form>
+        </div>
       </div>
 
       <!-- Quick Actions -->
       <div class="mt-6 flex justify-center space-x-4">
         <a 
-          href={`/products/${auction.Product?.id}`}
+          href={`/products/${auction.product?.id || ''}`}
           class="text-primary-600 hover:text-primary-500 font-medium"
         >
           Ver detalles del producto
         </a>
         <span class="text-gray-300">•</span>
         <a 
-          href="/auctions"
+          href="/products"
           class="text-gray-600 hover:text-gray-500"
         >
-          Ver otras subastas
+          Ver otros productos
         </a>
       </div>
     </div>
@@ -131,9 +209,284 @@ if (!auction && !error) {
 </Layout>
 
 <script define:vars={{ auction }}>
-  // Update countdown for auction end time
+  // Import stores and services
+  let $user, $token, api, io;
+  
+  // WebSocket connection
+  let socket = null;
+  let isConnected = false;
+
+  // Initialize everything
+  async function init() {
+    try {
+      // Import dependencies using dynamic imports
+      const authStoreModule = await import('/src/stores/authStore.js');
+      $user = authStoreModule.$user;
+      $token = authStoreModule.$token;
+      
+      const apiModule = await import('/src/services/api.js');
+      api = apiModule.api;
+      
+      // Import Socket.IO from CDN since it might not be available as ES module
+      if (!window.io) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.socket.io/4.7.4/socket.io.min.js';
+        document.head.appendChild(script);
+        
+        // Wait for Socket.IO to load
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+        });
+      }
+      
+      io = window.io;
+      
+      // Check authentication
+      checkAuth();
+      
+      // Initialize WebSocket if authenticated
+      const token = $token.get();
+      if (token) {
+        initWebSocket(token);
+      }
+      
+      // Initialize countdown
+      if (auction?.status === 'active' && auction?.end_time) {
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+      }
+      
+    } catch (error) {
+      console.error('Error initializing:', error);
+    }
+  }
+
+  // Check authentication status
+  function checkAuth() {
+    const token = $token.get();
+    const user = $user.get();
+
+    const bidForm = document.getElementById('bid-form');
+    const authRequired = document.getElementById('auth-required');
+    const messageForm = document.getElementById('message-form');
+    const messageAuthRequired = document.getElementById('message-auth-required');
+
+    if (token && user) {
+      bidForm?.classList.remove('hidden');
+      authRequired?.classList.add('hidden');
+      messageForm?.classList.remove('hidden');
+      messageAuthRequired?.classList.add('hidden');
+    } else {
+      bidForm?.classList.add('hidden');
+      authRequired?.classList.remove('hidden');
+      messageForm?.classList.add('hidden');
+      messageAuthRequired?.classList.remove('hidden');
+    }
+  }
+
+  // Initialize WebSocket connection
+  function initWebSocket(token) {
+    try {
+      const WS_URL = 'http://localhost:3501';
+      
+      socket = io(WS_URL, {
+        auth: { token },
+        transports: ['websocket', 'polling']
+      });
+
+      socket.on('connect', () => {
+        console.log('✅ Connected to WebSocket');
+        isConnected = true;
+        updateConnectionStatus('Conectado');
+        
+        // Join auction room
+        socket.emit('join_auction', { auctionId: auction.id });
+      });
+
+      socket.on('disconnect', () => {
+        console.log('❌ Disconnected from WebSocket');
+        isConnected = false;
+        updateConnectionStatus('Desconectado');
+      });
+
+      socket.on('joined_auction', (data) => {
+        console.log('🏠 Joined auction:', data);
+        updateUserCount(data.connectedCount || 0);
+      });
+
+      socket.on('chat_history', (messages) => {
+        console.log('📜 Chat history:', messages);
+        displayMessages(messages);
+      });
+
+      socket.on('new_message', (message) => {
+        console.log('💬 New message:', message);
+        addMessage(message);
+      });
+
+      socket.on('new_bid', (bidData) => {
+        console.log('💰 New bid:', bidData);
+        updateCurrentPrice(bidData.currentPrice || bidData.amount);
+        addBidMessage(bidData);
+      });
+
+      socket.on('price_update', (data) => {
+        console.log('💲 Price update:', data);
+        updateCurrentPrice(data.currentPrice);
+      });
+
+      socket.on('user_joined', (data) => {
+        updateUserCount(data.connectedCount || 0);
+        addSystemMessage(`${data.username || 'Usuario'} se unió al chat`);
+      });
+
+      socket.on('user_left', (data) => {
+        updateUserCount(data.connectedCount || 0);
+        addSystemMessage(`${data.username || 'Usuario'} salió del chat`);
+      });
+
+      socket.on('error', (error) => {
+        console.error('❌ Socket error:', error);
+        console.log('Error: ' + error.message);
+      });
+
+    } catch (error) {
+      console.error('Error initializing WebSocket:', error);
+    }
+  }
+
+  // Update connection status
+  function updateConnectionStatus(status) {
+    const statusEl = document.getElementById('connection-status');
+    if (statusEl) {
+      statusEl.textContent = status;
+      statusEl.className = isConnected ? 'text-success-600' : 'text-error-600';
+    }
+  }
+
+  // Update user count
+  function updateUserCount(count) {
+    const countEl = document.getElementById('user-count');
+    if (countEl) {
+      countEl.textContent = count || 0;
+    }
+  }
+
+  // Update current price
+  function updateCurrentPrice(price) {
+    const priceEl = document.getElementById('current-price');
+    if (priceEl) {
+      priceEl.textContent = `$${parseFloat(price || 0).toLocaleString()}`;
+    }
+    
+    // Update minimum bid amount
+    const bidInput = document.getElementById('bid-amount');
+    if (bidInput) {
+      const minBid = parseFloat(price || 0) + 0.01;
+      bidInput.min = minBid.toFixed(2);
+      bidInput.step = "0.01";
+      
+      const label = document.querySelector('label[for="bid-amount"]');
+      if (label) {
+        label.textContent = `Monto de la Oferta (mínimo: $${minBid.toFixed(2)})`;
+      }
+    }
+    
+    // Update auction current price
+    auction.current_price = price;
+  }
+
+  // Display messages
+  function displayMessages(messages) {
+    const container = document.getElementById('messages-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!messages || messages.length === 0) {
+      container.innerHTML = '<div class="text-center text-gray-500 text-sm">No hay mensajes aún. ¡Sé el primero en escribir!</div>';
+      return;
+    }
+    
+    messages.forEach(message => {
+      addMessage(message, false); // false = don't scroll to bottom for initial load
+    });
+    
+    // Scroll to bottom after loading all messages
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // Add message to chat
+  function addMessage(message, scrollToBottom = true) {
+    const container = document.getElementById('messages-container');
+    if (!container) return;
+
+    const messageEl = document.createElement('div');
+    messageEl.className = 'flex items-start space-x-3';
+
+    const isSystem = message.userId === 'system' || message.type === 'system';
+    const isBid = message.type === 'bid' || message.is_bid;
+
+    if (isSystem) {
+      messageEl.innerHTML = `
+        <div class="flex-1 text-center">
+          <p class="text-sm text-gray-500 italic">${message.message}</p>
+        </div>
+      `;
+    } else {
+      const timestamp = message.timestamp || message.created_at || message.createdAt;
+      const timeString = timestamp ? new Date(timestamp).toLocaleTimeString() : '';
+      
+      messageEl.innerHTML = `
+        <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+          <span class="text-xs font-medium text-gray-700">
+            ${(message.username || message.user?.nombre || 'U').charAt(0).toUpperCase()}
+          </span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center space-x-2">
+            <p class="font-medium text-gray-900 text-sm">${message.username || message.user?.nombre || 'Usuario'}</p>
+            ${timeString ? `<p class="text-xs text-gray-500">${timeString}</p>` : ''}
+            ${isBid ? '<span class="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded">Oferta</span>' : ''}
+          </div>
+          <p class="text-gray-700 text-sm mt-1 ${isBid ? 'font-semibold' : ''}">${message.message}</p>
+        </div>
+      `;
+    }
+
+    container.appendChild(messageEl);
+
+    if (scrollToBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  // Add bid message
+  function addBidMessage(bidData) {
+    addMessage({
+      userId: bidData.userId,
+      username: bidData.username,
+      message: `Hizo una oferta de $${parseFloat(bidData.bidAmount || bidData.amount || 0).toLocaleString()}${bidData.message ? ` - ${bidData.message}` : ''}`,
+      timestamp: bidData.timestamp || new Date().toISOString(),
+      type: 'bid'
+    });
+  }
+
+  // Add system message
+  function addSystemMessage(message) {
+    addMessage({
+      userId: 'system',
+      username: 'Sistema',
+      message: message,
+      timestamp: new Date().toISOString(),
+      type: 'system'
+    });
+  }
+
+  // Update countdown timer
   function updateCountdown() {
-    if (!auction || auction.status !== 'active') return;
+    if (!auction || auction.status !== 'active' || !auction.end_time) return;
     
     const endTime = new Date(auction.end_time);
     const now = new Date();
@@ -148,30 +501,129 @@ if (!auction && !error) {
       return;
     }
     
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const totalHours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    let timeString = '';
-    if (days > 0) {
-      timeString = `${days}d ${hours}h`;
-    } else if (hours > 0) {
-      timeString = `${hours}h ${minutes}m`;
-    } else {
-      timeString = `${minutes}m ${seconds}s`;
-    }
+
+    const timeString = `${totalHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     
     countdownEl.textContent = timeString;
+    
+    if (totalHours < 1) {
+      countdownEl.className = 'font-semibold text-error-600 animate-pulse';
+    }
   }
 
-  // Initialize countdown
-  updateCountdown();
-  
-  // Update countdown every second
-  if (auction?.status === 'active') {
-    setInterval(updateCountdown, 1000);
-  }
+  // Event handlers
+  document.addEventListener('DOMContentLoaded', () => {
+    init();
+
+    // Bid form handler
+    const bidForm = document.getElementById('bid-form');
+    if (bidForm) {
+      bidForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const amountInput = document.getElementById('bid-amount');
+        const messageInput = document.getElementById('bid-message');
+        const bidButton = document.getElementById('bid-button');
+        
+        if (!amountInput || !socket || !isConnected) {
+          alert('No hay conexión al servidor. Por favor, recarga la página.');
+          return;
+        }
+        
+        const amount = parseFloat(amountInput.value);
+        const currentPrice = parseFloat(auction.current_price);
+        const minBid = currentPrice + 0.01;
+        
+        // Validación más precisa
+        if (isNaN(amount) || amount < minBid) {
+          alert(`Por favor ingresa un monto válido. El mínimo es $${minBid.toFixed(2)}`);
+          return;
+        }
+        
+        bidButton.disabled = true;
+        bidButton.textContent = 'Enviando...';
+        
+        try {
+          const bidData = {
+            auctionId: auction.id,
+            bidAmount: amount,
+            message: messageInput.value || ''
+          };
+          
+          // Mostrar inmediatamente en el chat local
+          const user = $user.get();
+          const bidMessage = {
+            userId: user?.id,
+            username: user?.nombre || 'Tú',
+            message: `Hizo una oferta de $${amount.toLocaleString()}${bidData.message ? ` - ${bidData.message}` : ''}`,
+            timestamp: new Date().toISOString(),
+            type: 'bid',
+            is_bid: true
+          };
+          
+          addMessage(bidMessage);
+          
+          // Send bid via WebSocket
+          socket.emit('place_bid', bidData);
+          
+          // Clear form
+          amountInput.value = '';
+          messageInput.value = '';
+          
+          // Update current price locally (será confirmado por el servidor)
+          auction.current_price = amount;
+          updateCurrentPrice(amount);
+          
+        } catch (error) {
+          console.error('Error sending bid:', error);
+          alert('Error al enviar la oferta: ' + error.message);
+        } finally {
+          bidButton.disabled = false;
+          bidButton.textContent = 'Enviar Oferta';
+        }
+      });
+    }
+
+    // Message form handler
+    const messageForm = document.getElementById('message-form');
+    if (messageForm) {
+      messageForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const messageInput = document.getElementById('message-input');
+        if (!messageInput || !socket || !isConnected) {
+          alert('No hay conexión al servidor. Por favor, recarga la página.');
+          return;
+        }
+        
+        const message = messageInput.value.trim();
+        if (!message) return;
+        
+        try {
+          socket.emit('send_message', {
+            auctionId: auction.id,
+            message: message
+          });
+          
+          messageInput.value = '';
+        } catch (error) {
+          console.error('Error sending message:', error);
+          alert('Error al enviar mensaje: ' + error.message);
+        }
+      });
+    }
+  });
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (socket) {
+      socket.emit('leave_auction', { auctionId: auction.id });
+      socket.disconnect();
+    }
+  });
 </script>
 
 <style>
