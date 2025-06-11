@@ -21,7 +21,7 @@ import Footer from "../components/Footer.astro";
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Welcome Header -->
         <div class="bg-gradient-to-r from-primary-500 to-accent-500 rounded-lg p-6 text-white mb-8">
-          <h1 class="text-2xl font-bold mb-2">¡Bienvenido de vuelta, <span id="user-name"></span>!</h1>
+          <h1 class="text-2xl font-bold mb-2">¡Bienvenido de vuelta, <span id="user-name">Usuario</span>!</h1>
           <p class="opacity-90">Gestiona tus subastas y ofertas desde tu panel de control</p>
         </div>
 
@@ -36,7 +36,9 @@ import Footer from "../components/Footer.astro";
               </div>
               <div class="ml-4">
                 <p class="text-sm text-gray-600">Mis Productos</p>
-                <p class="text-2xl font-bold text-gray-900" id="products-count">-</p>
+                <p class="text-2xl font-bold text-gray-900">
+                  <span id="products-count" class="inline-block min-w-[2ch]">-</span>
+                </p>
               </div>
             </div>
           </div>
@@ -50,7 +52,9 @@ import Footer from "../components/Footer.astro";
               </div>
               <div class="ml-4">
                 <p class="text-sm text-gray-600">Subastas Activas</p>
-                <p class="text-2xl font-bold text-gray-900" id="active-auctions-count">-</p>
+                <p class="text-2xl font-bold text-gray-900">
+                  <span id="active-auctions-count" class="inline-block min-w-[2ch]">-</span>
+                </p>
               </div>
             </div>
           </div>
@@ -64,7 +68,9 @@ import Footer from "../components/Footer.astro";
               </div>
               <div class="ml-4">
                 <p class="text-sm text-gray-600">Mis Ofertas</p>
-                <p class="text-2xl font-bold text-gray-900" id="bids-count">-</p>
+                <p class="text-2xl font-bold text-gray-900">
+                  <span id="bids-count" class="inline-block min-w-[2ch]">-</span>
+                </p>
               </div>
             </div>
           </div>
@@ -79,7 +85,9 @@ import Footer from "../components/Footer.astro";
               </div>
               <div class="ml-4">
                 <p class="text-sm text-gray-600">Ganadas</p>
-                <p class="text-2xl font-bold text-gray-900" id="won-auctions-count">-</p>
+                <p class="text-2xl font-bold text-gray-900">
+                  <span id="won-auctions-count" class="inline-block min-w-[2ch]">-</span>
+                </p>
               </div>
             </div>
           </div>
@@ -151,19 +159,32 @@ import Footer from "../components/Footer.astro";
   import { $user, $token, authActions } from '../stores/authStore.js';
   import { api } from '../services/api.js';
 
+  // DOM elements
   const authCheck = document.getElementById('auth-check');
   const dashboardContent = document.getElementById('dashboard-content');
   const userName = document.getElementById('user-name');
+  const productsCountEl = document.getElementById('products-count');
+  const activeAuctionsCountEl = document.getElementById('active-auctions-count');
+  const bidsCountEl = document.getElementById('bids-count');
+  const wonAuctionsCountEl = document.getElementById('won-auctions-count');
+  const recentActivityEl = document.getElementById('recent-activity');
 
+  // State
+  let dashboardData = {
+    userProducts: [],
+    userBids: [],
+    userStats: null
+  };
+
+  /**
+   * Check if user is authenticated
+   */
   async function checkAuthentication() {
     const token = $token.get();
     const user = $user.get();
 
     if (!token || !user) {
-      // Show auth check loading
-      if (authCheck) authCheck.classList.remove('hidden');
-      if (dashboardContent) dashboardContent.classList.add('hidden');
-      
+      showAuthCheck();
       // Redirect to login after a short delay
       setTimeout(() => {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
@@ -172,73 +193,210 @@ import Footer from "../components/Footer.astro";
     }
 
     // User is authenticated
-    if (authCheck) authCheck.classList.add('hidden');
-    if (dashboardContent) dashboardContent.classList.remove('hidden');
+    hideAuthCheck();
     if (userName) {
-      userName.textContent = user.nombre;
+      userName.textContent = user.nombre || user.name || 'Usuario';
     }
     
     return true;
   }
 
+  /**
+   * Show authentication loading state
+   */
+  function showAuthCheck() {
+    if (authCheck) authCheck.classList.remove('hidden');
+    if (dashboardContent) dashboardContent.classList.add('hidden');
+  }
+
+  /**
+   * Hide authentication loading state
+   */
+  function hideAuthCheck() {
+    if (authCheck) authCheck.classList.add('hidden');
+    if (dashboardContent) dashboardContent.classList.remove('hidden');
+  }
+
+  /**
+   * Update stats display with loading state
+   */
+  function showStatsLoading() {
+    const elements = [productsCountEl, activeAuctionsCountEl, bidsCountEl, wonAuctionsCountEl];
+    elements.forEach(el => {
+      if (el) {
+        el.innerHTML = '<div class="animate-pulse bg-gray-200 h-4 w-8 rounded"></div>';
+      }
+    });
+  }
+
+  /**
+   * Update stats display with actual data
+   */
+  function updateStatsDisplay(stats) {
+    if (productsCountEl) productsCountEl.textContent = stats.productsCount || '0';
+    if (activeAuctionsCountEl) activeAuctionsCountEl.textContent = stats.activeAuctionsCount || '0';
+    if (bidsCountEl) bidsCountEl.textContent = stats.bidsCount || '0';
+    if (wonAuctionsCountEl) wonAuctionsCountEl.textContent = stats.wonAuctionsCount || '0';
+  }
+
+  /**
+   * Update stats display with error state
+   */
+  function showStatsError() {
+    const elements = [productsCountEl, activeAuctionsCountEl, bidsCountEl, wonAuctionsCountEl];
+    elements.forEach(el => {
+      if (el) el.textContent = '0';
+    });
+  }
+
+  /**
+   * Load dashboard data from API
+   */
   async function loadDashboardData() {
+    try {
+      const token = $token.get();
+      const currentUser = $user.get();
+      
+      if (!token || !currentUser) {
+        throw new Error('No token or user available');
+      }
+
+      showStatsLoading();
+
+      // Try to use the getUserStats endpoint first
+      let userStats = null;
+      try {
+        userStats = await api.getUserStats(token);
+        console.log('✅ Loaded user stats from API:', userStats);
+      } catch (statsError) {
+        console.warn('⚠️ getUserStats not available, falling back to individual calls:', statsError.message);
+      }
+
+      // If getUserStats worked, use those stats
+      if (userStats) {
+        updateStatsDisplay({
+          productsCount: userStats.productsCount || userStats.totalProducts || 0,
+          activeAuctionsCount: userStats.activeAuctionsCount || userStats.activeAuctions || 0,
+          bidsCount: userStats.bidsCount || userStats.totalBids || 0,
+          wonAuctionsCount: userStats.wonAuctionsCount || userStats.wonAuctions || 0
+        });
+        dashboardData.userStats = userStats;
+      } else {
+        // Fallback to individual API calls
+        const [userProducts, userBids] = await Promise.all([
+          api.getUserProducts(token).catch(err => {
+            console.warn('⚠️ Failed to load user products:', err.message);
+            return [];
+          }),
+          api.getUserBids(token).catch(err => {
+            console.warn('⚠️ Failed to load user bids:', err.message);
+            return [];
+          })
+        ]);
+
+        dashboardData.userProducts = userProducts;
+        dashboardData.userBids = userBids;
+
+        // Calculate stats from the data
+        const stats = calculateStatsFromData(userProducts, userBids, currentUser);
+        updateStatsDisplay(stats);
+      }
+
+      // Load recent activity
+      await loadRecentActivity();
+
+    } catch (error) {
+      console.error('❌ Error loading dashboard data:', error);
+      showStatsError();
+      showRecentActivityError();
+    }
+  }
+
+  /**
+   * Calculate stats from raw data when getUserStats is not available
+   */
+  function calculateStatsFromData(products, bids, currentUser) {
+    const productsCount = products.length;
+    
+    // Count active auctions
+    const activeAuctionsCount = products.filter(product => {
+      const auction = product.Auction || product.auction;
+      return auction && auction.status === 'active';
+    }).length;
+    
+    const bidsCount = bids.length;
+    
+    // Count won auctions
+    const wonAuctionsCount = bids.filter(bid => {
+      const auction = bid.auction || bid.Auction;
+      return auction && 
+             auction.status === 'closed' && 
+             (auction.winner_id === currentUser.id || auction.winnerId === currentUser.id);
+    }).length;
+
+    return {
+      productsCount,
+      activeAuctionsCount,
+      bidsCount,
+      wonAuctionsCount
+    };
+  }
+
+  /**
+   * Load and display recent activity
+   */
+  async function loadRecentActivity() {
     try {
       const token = $token.get();
       if (!token) return;
 
-      // Load user's products and stats
-      const [userProducts, userBids] = await Promise.all([
-        api.getUserProducts(token),
-        api.getUserBids(token)
-      ]);
+      // If we don't have products and bids data, fetch them
+      if (dashboardData.userProducts.length === 0 && dashboardData.userBids.length === 0) {
+        const [products, bids] = await Promise.all([
+          api.getUserProducts(token).catch(() => []),
+          api.getUserBids(token).catch(() => [])
+        ]);
+        dashboardData.userProducts = products;
+        dashboardData.userBids = bids;
+      }
 
-      // Update stats
-      const productsCount = userProducts.length;
-      const activeAuctionsCount = userProducts.filter((p: any) => p.Auction?.status === 'active').length;
-      const bidsCount = userBids.length;
-      const wonAuctionsCount = userBids.filter(bid => bid.auction?.status === 'closed' && bid.auction?.winner_id === $user.get().id).length;
-
-      document.getElementById('products-count').textContent = productsCount;
-      document.getElementById('active-auctions-count').textContent = activeAuctionsCount;
-      document.getElementById('bids-count').textContent = bidsCount;
-      document.getElementById('won-auctions-count').textContent = wonAuctionsCount;
-
-      // Load recent activity
-      loadRecentActivity(userProducts, userBids);
-
+      displayRecentActivity(dashboardData.userProducts, dashboardData.userBids);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
-      // Show error stats
-      document.getElementById('products-count').textContent = '0';
-      document.getElementById('active-auctions-count').textContent = '0';
-      document.getElementById('bids-count').textContent = '0';
-      document.getElementById('won-auctions-count').textContent = '0';
+      console.error('❌ Error loading recent activity:', error);
+      showRecentActivityError();
     }
   }
 
-  function loadRecentActivity(products, bids) {
-    const recentActivityContainer = document.getElementById('recent-activity');
-    
+  /**
+   * Display recent activity in the UI
+   */
+  function displayRecentActivity(products, bids) {
+    if (!recentActivityEl) return;
+
     // Combine and sort recent activities
     const activities = [];
     
-    // Recent products
-    products.slice(0, 3).forEach(product => {
+    // Recent products (last 5)
+    products.slice(-5).forEach(product => {
       activities.push({
         type: 'product',
-        date: new Date(product.createdAt),
-        content: `Publicaste "${product.name}"`,
+        date: new Date(product.createdAt || product.created_at),
+        content: `Publicaste "${product.name || product.title}"`,
         link: `/products/${product.id}`
       });
     });
     
-    // Recent bids
-    bids.slice(0, 3).forEach(bid => {
+    // Recent bids (last 5)
+    bids.slice(-5).forEach(bid => {
+      const auction = bid.auction || bid.Auction;
+      const product = auction?.Product || auction?.product;
+      const productName = product?.name || product?.title || 'Producto';
+      
       activities.push({
         type: 'bid',
-        date: new Date(bid.createdAt),
-        content: `Ofertaste $${bid.amount.toLocaleString()} en "${bid.auction?.Product?.name || 'Producto'}"`,
-        link: `/products/${bid.auction?.Product?.id}`
+        date: new Date(bid.createdAt || bid.created_at),
+        content: `Ofertaste $${(bid.amount || 0).toLocaleString()} en "${productName}"`,
+        link: product ? `/products/${product.id}` : null
       });
     });
     
@@ -246,7 +404,7 @@ import Footer from "../components/Footer.astro";
     activities.sort((a, b) => b.date - a.date);
     
     if (activities.length === 0) {
-      recentActivityContainer.innerHTML = `
+      recentActivityEl.innerHTML = `
         <div class="text-center py-8">
           <div class="text-gray-400 mb-2">
             <svg class="w-12 h-12 mx-auto" fill="currentColor" viewBox="0 0 20 20">
@@ -260,7 +418,7 @@ import Footer from "../components/Footer.astro";
       return;
     }
     
-    recentActivityContainer.innerHTML = `
+    recentActivityEl.innerHTML = `
       <div class="space-y-4">
         ${activities.slice(0, 5).map(activity => `
           <div class="flex items-start space-x-3">
@@ -281,7 +439,7 @@ import Footer from "../components/Footer.astro";
             </div>
             <div class="flex-1">
               <p class="text-sm text-gray-900">${activity.content}</p>
-              <p class="text-xs text-gray-500">${activity.date.toLocaleDateString()} ${activity.date.toLocaleTimeString()}</p>
+              <p class="text-xs text-gray-500">${formatDate(activity.date)}</p>
             </div>
             ${activity.link ? `
               <a href="${activity.link}" class="text-primary-600 hover:text-primary-500 text-sm">
@@ -294,11 +452,65 @@ import Footer from "../components/Footer.astro";
     `;
   }
 
-  // Initialize dashboard
+  /**
+   * Show error state for recent activity
+   */
+  function showRecentActivityError() {
+    if (!recentActivityEl) return;
+    
+    recentActivityEl.innerHTML = `
+      <div class="text-center py-8">
+        <div class="text-red-400 mb-2">
+          <svg class="w-12 h-12 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <p class="text-gray-500">Error al cargar actividad reciente</p>
+        <button onclick="location.reload()" class="text-sm text-primary-600 hover:text-primary-500 mt-2">
+          Intentar de nuevo
+        </button>
+      </div>
+    `;
+  }
+
+  /**
+   * Format date for display
+   */
+  function formatDate(date) {
+    if (!date || isNaN(date.getTime())) return 'Fecha no disponible';
+    
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Ayer';
+    } else if (diffDays < 7) {
+      return `${diffDays} días atrás`;
+    } else {
+      return date.toLocaleDateString('es-ES', { 
+        day: 'numeric', 
+        month: 'short',
+        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    }
+  }
+
+  /**
+   * Initialize dashboard
+   */
   async function initDashboard() {
-    const isAuthenticated = await checkAuthentication();
-    if (isAuthenticated) {
-      await loadDashboardData();
+    try {
+      const isAuthenticated = await checkAuthentication();
+      if (isAuthenticated) {
+        await loadDashboardData();
+      }
+    } catch (error) {
+      console.error('❌ Error initializing dashboard:', error);
+      showStatsError();
+      showRecentActivityError();
     }
   }
 
@@ -306,9 +518,20 @@ import Footer from "../components/Footer.astro";
   $token.subscribe(async (token) => {
     if (token) {
       await initDashboard();
+    } else {
+      showAuthCheck();
     }
   });
 
   // Initial load
-  initDashboard();
+  document.addEventListener('DOMContentLoaded', () => {
+    initDashboard();
+  });
+
+  // Also run immediately in case DOM is already loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDashboard);
+  } else {
+    initDashboard();
+  }
 </script>

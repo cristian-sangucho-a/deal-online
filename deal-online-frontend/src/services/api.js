@@ -148,6 +148,19 @@ export const api = {
     return this.request(`/auctions/active?${params.toString()}`);
   },
 
+  // User data endpoints - NUEVOS MÉTODOS
+  async getUserProducts(token) {
+    return this.request("/my-products", "GET", null, token);
+  },
+
+  async getUserBids(token) {
+    return this.request("/my-bids", "GET", null, token);
+  },
+
+  async getUserStats(token) {
+    return this.request("/my-stats", "GET", null, token);
+  },
+
   // Bid endpoints
   async placeBid(auctionId, amount, message = "", token) {
     return this.request(

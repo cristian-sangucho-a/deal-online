@@ -8,8 +8,11 @@ import {
   placeBid,
   closeAuction,
   getAllActiveAuctions,
+  getUserProducts,
+  getUserBids,
+  getUserStats
 } from "../controllers/auction.Controller.js";
-import verifyToken from "../middlewares/auth.middleware.js"; // Asegúrate de que la ruta sea correcta
+import verifyToken from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -18,7 +21,13 @@ router.post("/product", verifyToken, createProduct);
 router.put("/products/:id", verifyToken, updateProduct);
 router.delete("/products/:id", verifyToken, deleteProduct);
 router.post("/bids", verifyToken, placeBid);
-router.post("/c/:auction_id/close", verifyToken, closeAuction);
+router.post("/auctions/:auction_id/close", verifyToken, closeAuction);
+
+// Nuevas rutas para datos del usuario
+router.get("/my-products", verifyToken, getUserProducts);
+router.get("/my-bids", verifyToken, getUserBids);
+router.get("/my-stats", verifyToken, getUserStats);
+
 // Rutas públicas
 router.get("/products", getAllProducts);
 router.get("/products/:id", getProductById);
