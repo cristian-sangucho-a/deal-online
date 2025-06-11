@@ -12,6 +12,7 @@
   "dependencies": {
     "@astrojs/tailwind": "^5.1.2",
     "@nanostores/persistent": "^0.10.1",
+    "@supabase/supabase-js": "^2.50.0",
     "astro": "^5.2.5",
     "nanostores": "^0.10.3",
     "socket.io": "^4.8.1",

@@ -37,7 +37,6 @@ export const createProduct = async (req, res) => {
 export const getAllProducts = async (req, res) => {
   try {
     const products = await AuctionService.getAllProducts();
-    console.log("Products fetched:", products);
     res.status(200).json(products);
   } catch (error) {
     handleHttpError(res, "GET_PRODUCTS_ERROR", error, error.status || 500);

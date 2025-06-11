@@ -82,7 +82,7 @@ export const api = {
 
   // Product endpoints
   async createProduct(productData, token) {
-    return this.request("/products", "POST", productData, token);
+    return this.request("/product", "POST", productData, token);
   },
 
   async getAllProducts(params = {}) {
@@ -174,7 +174,10 @@ export const api = {
     return this.request(`/chat/${auctionId}`);
   },
 
-  async sendChatMessage(token, { auction_id, message, bid_amount = null, is_bid = false }) {
+  async sendChatMessage(
+    token,
+    { auction_id, message, bid_amount = null, is_bid = false }
+  ) {
     return this.request(
       "/chat",
       "POST",
