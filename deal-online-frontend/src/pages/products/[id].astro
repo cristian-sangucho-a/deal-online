@@ -238,22 +238,40 @@ if (!finalProduct && !error) {
 <script define:vars={{ finalProduct }}>
   // Update countdown timer for auction
   function updateCountdown() {
-    if (!finalProduct.auction || finalProduct.auction.status !== "active")
-      return;
+    if (!finalProduct.auction) return;
 
     const endTime = new Date(finalProduct.auction.end_time);
     const now = new Date();
     const diff = endTime.getTime() - now.getTime();
 
     const countdownEl = document.getElementById("countdown");
+    const statusEl = document.querySelector("#auction-section .rounded-full");
+    const offerButton = document.querySelector("#auction-section a[href*='/chat/']");
+    
     if (!countdownEl) return;
 
     if (diff <= 0) {
+      // Subasta finalizada
       countdownEl.textContent = "Subasta finalizada";
       countdownEl.className = "text-lg font-semibold text-error-600";
+      
+      // Actualizar estado visual
+      if (statusEl) {
+        statusEl.className = "px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800";
+        statusEl.textContent = "Finalizada";
+      }
+      
+      // Ocultar botón de oferta
+      if (offerButton) {
+        offerButton.style.display = "none";
+      }
+      
+      // Actualizar el estado interno
+      finalProduct.auction.status = "expired";
       return;
     }
 
+    // Subasta activa
     const totalHours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -264,6 +282,8 @@ if (!finalProduct && !error) {
     
     if (totalHours < 1) {
       countdownEl.className = "text-lg font-semibold text-error-600 animate-pulse";
+    } else {
+      countdownEl.className = "text-lg font-semibold text-gray-900";
     }
   }
 
