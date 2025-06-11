@@ -1,134 +1,184 @@
 ---
-import Layout from "../../layouts/Layout.astro";
-import Header from "../../components/Header.astro";
-import { api } from "../../services/api.js";
-import { $token, $user } from "../../stores/authStore.js";
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import AuctionChat from '../../components/AuctionChat.astro';
+import { api } from '../../services/api.js';
 
 const { auctionId } = Astro.params;
 
-let messages = [];
-let newMessage = "";
-let bidAmount = "";
-let errorMessage = "";
-let successMessage = "";
+let auction = null;
+let error = null;
 
-async function fetchMessages() {
-    try {
-        messages = await api.getChatMessages(auctionId);
-    } catch (err) {
-        console.error(err);
-        errorMessage = "No se pudo cargar el chat.";
-    }
+try {
+  auction = await api.getAuctionById(auctionId);
+} catch (err) {
+  error = err.message;
 }
 
-async function sendChatMessage(e: Event) {
-    e.preventDefault();
-    const token = $token.get();
-    const user = $user.get();
-
-    if (!token || !user) {
-        errorMessage = "Debes iniciar sesión para enviar mensajes.";
-        return;
-    }
-
-    if (!newMessage && !bidAmount) {
-        errorMessage = "Debes escribir un mensaje o una oferta.";
-        return;
-    }
-
-    try {
-        const isBid = !!bidAmount;
-        await api.sendChatMessage(token, {
-            auction_id: auctionId,
-            message: newMessage,
-            bid_amount: isBid ? parseFloat(bidAmount) : null,
-            is_bid: isBid,
-        });
-        successMessage = isBid ? "Oferta enviada." : "Mensaje enviado.";
-        newMessage = "";
-        bidAmount = "";
-        await fetchMessages(); // refrescar
-    } catch (err) {
-        console.error(err);
-        errorMessage = "Error al enviar el mensaje.";
-    }
+if (!auction && !error) {
+  return Astro.redirect('/404');
 }
-
-await fetchMessages();
 ---
 
-<Layout title="Chat de la Subasta">
-    <Header />
+<Layout title={auction ? `Chat - ${auction.Product?.name || 'Subasta'}` : 'Chat no encontrado'}>
+  <Header />
+  
+  {error ? (
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+      <h1 class="text-2xl font-bold text-gray-900 mb-4">Error al cargar el chat</h1>
+      <p class="text-gray-600 mb-6">{error}</p>
+      <a href="/auctions" class="text-primary-600 hover:text-primary-500">← Volver a subastas</a>
+    </div>
+  ) : (
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Header -->
+      <div class="mb-6">
+        <nav class="mb-4">
+          <ol class="flex items-center space-x-2 text-sm text-gray-500">
+            <li><a href="/" class="hover:text-gray-700">Inicio</a></li>
+            <li><span>→</span></li>
+            <li><a href="/auctions" class="hover:text-gray-700">Subastas</a></li>
+            <li><span>→</span></li>
+            <li class="text-gray-900">Chat</li>
+          </ol>
+        </nav>
 
-    <main class="max-w-4xl mx-auto px-4 py-8">
-        <h1 class="text-2xl font-bold mb-4">Chat de la Subasta #{auctionId}</h1>
-
-        {
-            errorMessage && (
-                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded">
-                    {errorMessage}
-                </div>
-            )
-        }
-
-        {
-            successMessage && (
-                <div class="mb-4 p-3 bg-green-100 text-green-700 rounded">
-                    {successMessage}
-                </div>
-            )
-        }
-
-        <div class="bg-white rounded shadow p-4 mb-6 h-[400px] overflow-y-scroll border border-gray-200">
-            {
-                messages.length > 0 ? (
-                    messages.map(msg => (
-                        <div class="mb-3">
-                            <div class="font-semibold text-primary-700">
-                                {msg.sender?.nombre || "Usuario"}:
-                            </div>
-                            <div class="text-sm">
-                                {msg.is_bid ? `💰 Oferta: $${msg.bid_amount}` : msg.message}
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <p class="text-gray-500">Aún no hay mensajes.</p>
-                )
-            }
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+              Chat de Subasta: {auction.Product?.name || 'Producto'}
+            </h1>
+            <p class="text-gray-600 mt-1">
+              Precio actual: ${auction.current_price.toLocaleString()} • 
+              Estado: <span class={`font-medium ${
+                auction.status === 'active' ? 'text-success-600' : 'text-gray-600'
+              }`}>
+                {auction.status === 'active' ? 'Activa' : 'Finalizada'}
+              </span>
+            </p>
+          </div>
+          
+          <a 
+            href={`/products/${auction.Product?.id}`}
+            class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            Ver Producto
+          </a>
         </div>
+      </div>
 
-        <form class="space-y-4" onsubmit={sendChatMessage}>
-            <div>
-                <label for="newMessage" class="block font-medium text-gray-700">Mensaje</label>
-                <input
-                    id="newMessage"
-                    type="text"
-                    bind:value={newMessage}
-                    placeholder="Escribe un mensaje..."
-                    class="w-full border rounded px-3 py-2"
-                />
+      <!-- Auction Summary Card -->
+      <div class="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <div class="flex items-start space-x-4">
+          <img 
+            src={auction.Product?.image_url || 'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=200'} 
+            alt={auction.Product?.name || 'Producto'}
+            class="w-20 h-20 object-cover rounded-lg"
+          />
+          <div class="flex-1">
+            <h3 class="font-semibold text-lg text-gray-900">{auction.Product?.name}</h3>
+            <p class="text-gray-600 text-sm mt-1 line-clamp-2">{auction.Product?.description}</p>
+            
+            <div class="flex items-center space-x-6 mt-3">
+              <div>
+                <span class="text-sm text-gray-500">Precio actual</span>
+                <p class="font-bold text-xl text-primary-600">${auction.current_price.toLocaleString()}</p>
+              </div>
+              
+              {auction.status === 'active' && (
+                <div>
+                  <span class="text-sm text-gray-500">Tiempo restante</span>
+                  <p id="countdown" class="font-semibold text-gray-900"></p>
+                </div>
+              )}
+              
+              <div>
+                <span class="text-sm text-gray-500">Vendedor</span>
+                <p class="font-medium text-gray-900">{auction.Product?.seller?.nombre || 'Usuario'}</p>
+              </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div>
-                <label for="bidAmount" class="block font-medium text-gray-700">Monto de oferta (opcional)</label>
-                <input
-                    id="bidAmount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    bind:value={bidAmount}
-                    placeholder="Ej: 25.00"
-                    class="w-full border rounded px-3 py-2"
-                />
-            </div>
+      <!-- Chat Component -->
+      <div class="h-[600px]">
+        <AuctionChat 
+          auctionId={auction.id} 
+          currentPrice={auction.current_price}
+          auctionStatus={auction.status}
+        />
+      </div>
 
-            <button
-                type="submit"
-                class="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition"
-            >
-                Enviar
-            </button>
-        </form>
-    </main>
+      <!-- Quick Actions -->
+      <div class="mt-6 flex justify-center space-x-4">
+        <a 
+          href={`/products/${auction.Product?.id}`}
+          class="text-primary-600 hover:text-primary-500 font-medium"
+        >
+          Ver detalles del producto
+        </a>
+        <span class="text-gray-300">•</span>
+        <a 
+          href="/auctions"
+          class="text-gray-600 hover:text-gray-500"
+        >
+          Ver otras subastas
+        </a>
+      </div>
+    </div>
+  )}
 </Layout>
+
+<script define:vars={{ auction }}>
+  // Update countdown for auction end time
+  function updateCountdown() {
+    if (!auction || auction.status !== 'active') return;
+    
+    const endTime = new Date(auction.end_time);
+    const now = new Date();
+    const diff = endTime.getTime() - now.getTime();
+    
+    const countdownEl = document.getElementById('countdown');
+    if (!countdownEl) return;
+    
+    if (diff <= 0) {
+      countdownEl.textContent = 'Finalizada';
+      countdownEl.className = 'font-semibold text-error-600';
+      return;
+    }
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    let timeString = '';
+    if (days > 0) {
+      timeString = `${days}d ${hours}h`;
+    } else if (hours > 0) {
+      timeString = `${hours}h ${minutes}m`;
+    } else {
+      timeString = `${minutes}m ${seconds}s`;
+    }
+    
+    countdownEl.textContent = timeString;
+  }
+
+  // Initialize countdown
+  updateCountdown();
+  
+  // Update countdown every second
+  if (auction?.status === 'active') {
+    setInterval(updateCountdown, 1000);
+  }
+</script>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>
