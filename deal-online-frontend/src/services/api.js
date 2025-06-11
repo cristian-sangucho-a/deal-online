@@ -150,6 +150,25 @@ export const api = {
   },
 
   // User endpoints
+  // Chat endpoints
+  async getChatMessages(auctionId) {
+    return this.request(`/chat/${auctionId}`);
+  },
+
+  async sendChatMessage(token, { auction_id, message, bid_amount = null, is_bid = false }) {
+    return this.request(
+      "/chat",
+      "POST",
+      {
+        auction_id,
+        message,
+        bid_amount,
+        is_bid,
+      },
+      token
+    );
+  },
+
   async getUserProfile(token) {
     return this.request("/users/profile", "GET", null, token);
   },

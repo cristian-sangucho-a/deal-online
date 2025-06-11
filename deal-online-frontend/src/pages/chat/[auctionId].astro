@@ -1,0 +1,134 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import { api } from "../../services/api.js";
+import { $token, $user } from "../../stores/authStore.js";
+
+const { auctionId } = Astro.params;
+
+let messages = [];
+let newMessage = "";
+let bidAmount = "";
+let errorMessage = "";
+let successMessage = "";
+
+async function fetchMessages() {
+    try {
+        messages = await api.getChatMessages(auctionId);
+    } catch (err) {
+        console.error(err);
+        errorMessage = "No se pudo cargar el chat.";
+    }
+}
+
+async function sendChatMessage(e: Event) {
+    e.preventDefault();
+    const token = $token.get();
+    const user = $user.get();
+
+    if (!token || !user) {
+        errorMessage = "Debes iniciar sesión para enviar mensajes.";
+        return;
+    }
+
+    if (!newMessage && !bidAmount) {
+        errorMessage = "Debes escribir un mensaje o una oferta.";
+        return;
+    }
+
+    try {
+        const isBid = !!bidAmount;
+        await api.sendChatMessage(token, {
+            auction_id: auctionId,
+            message: newMessage,
+            bid_amount: isBid ? parseFloat(bidAmount) : null,
+            is_bid: isBid,
+        });
+        successMessage = isBid ? "Oferta enviada." : "Mensaje enviado.";
+        newMessage = "";
+        bidAmount = "";
+        await fetchMessages(); // refrescar
+    } catch (err) {
+        console.error(err);
+        errorMessage = "Error al enviar el mensaje.";
+    }
+}
+
+await fetchMessages();
+---
+
+<Layout title="Chat de la Subasta">
+    <Header />
+
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold mb-4">Chat de la Subasta #{auctionId}</h1>
+
+        {
+            errorMessage && (
+                <div class="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    {errorMessage}
+                </div>
+            )
+        }
+
+        {
+            successMessage && (
+                <div class="mb-4 p-3 bg-green-100 text-green-700 rounded">
+                    {successMessage}
+                </div>
+            )
+        }
+
+        <div class="bg-white rounded shadow p-4 mb-6 h-[400px] overflow-y-scroll border border-gray-200">
+            {
+                messages.length > 0 ? (
+                    messages.map(msg => (
+                        <div class="mb-3">
+                            <div class="font-semibold text-primary-700">
+                                {msg.sender?.nombre || "Usuario"}:
+                            </div>
+                            <div class="text-sm">
+                                {msg.is_bid ? `💰 Oferta: $${msg.bid_amount}` : msg.message}
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <p class="text-gray-500">Aún no hay mensajes.</p>
+                )
+            }
+        </div>
+
+        <form class="space-y-4" onsubmit={sendChatMessage}>
+            <div>
+                <label for="newMessage" class="block font-medium text-gray-700">Mensaje</label>
+                <input
+                    id="newMessage"
+                    type="text"
+                    bind:value={newMessage}
+                    placeholder="Escribe un mensaje..."
+                    class="w-full border rounded px-3 py-2"
+                />
+            </div>
+
+            <div>
+                <label for="bidAmount" class="block font-medium text-gray-700">Monto de oferta (opcional)</label>
+                <input
+                    id="bidAmount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    bind:value={bidAmount}
+                    placeholder="Ej: 25.00"
+                    class="w-full border rounded px-3 py-2"
+                />
+            </div>
+
+            <button
+                type="submit"
+                class="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition"
+            >
+                Enviar
+            </button>
+        </form>
+    </main>
+</Layout>
