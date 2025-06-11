@@ -3,18 +3,38 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import { api } from '../../services/api.js';
 
-const { id } = Astro.params;
-
-let product = null;
-let error = null;
-
-try {
-  product = await api.getProductById(id);
-} catch (err) {
-  error = err.message;
+export async function getStaticPaths() {
+  try {
+    // Obtener todos los productos para generar las rutas
+    const response = await api.getAllProducts({ limit: 1000 }); // Ajusta el límite según necesites
+    const products = response.products || [];
+    
+    return products.map((product) => ({
+      params: { id: product.id.toString() },
+      props: { product }
+    }));
+  } catch (error) {
+    console.error('Error generating static paths:', error);
+    return [];
+  }
 }
 
-if (!product && !error) {
+const { id } = Astro.params;
+const { product } = Astro.props;
+
+let finalProduct = product;
+let error = null;
+
+// Si no se pasó el producto como prop, intentar obtenerlo
+if (!finalProduct) {
+  try {
+    finalProduct = await api.getProductById(id);
+  } catch (err) {
+    error = err.message;
+  }
+}
+
+if (!finalProduct && !error) {
   return Astro.redirect('/404');
 }
 ---

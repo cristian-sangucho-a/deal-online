@@ -14,7 +14,7 @@ import verifyToken from "../middlewares/auth.middleware.js"; // Asegúrate de qu
 const router = Router();
 
 // Rutas que requieren autenticación
-router.post("/products", verifyToken, createProduct);
+router.post("/product", verifyToken, createProduct);
 router.put("/products/:id", verifyToken, updateProduct);
 router.delete("/products/:id", verifyToken, deleteProduct);
 router.post("/bids", verifyToken, placeBid);

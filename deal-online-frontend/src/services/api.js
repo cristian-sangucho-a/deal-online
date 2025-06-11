@@ -85,14 +85,37 @@ export const api = {
     return this.request("/products", "POST", productData, token);
   },
 
-  async getAllProducts(page = 1, limit = 12, search = "", category = "") {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      ...(search && { search }),
-      ...(category && { category }),
-    });
-    return this.request(`/products?${params.toString()}`);
+  async getAllProducts(params = {}) {
+    // Construir query parameters si se proporcionan
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append("page", params.page);
+    if (params.limit) queryParams.append("limit", params.limit);
+    if (params.search) queryParams.append("search", params.search);
+    if (params.category) queryParams.append("category", params.category);
+    if (params.status) queryParams.append("status", params.status);
+    const endpoint = `/products${
+      queryParams.toString() ? "?" + queryParams.toString() : ""
+    }`;
+    try {
+      const response = await this.request(endpoint, "GET");
+      // Si la respuesta es un array directamente, normalizarla
+      if (Array.isArray(response)) {
+        return {
+          products: response,
+          total: response.length,
+          page: params.page || 1,
+        };
+      }
+
+      return response;
+    } catch (error) {
+      console.error("❌ Error en API /products:", {
+        message: error.message,
+        status: error.status,
+        data: error.data,
+      });
+      throw error;
+    }
   },
 
   async getProductById(id) {
@@ -105,10 +128,6 @@ export const api = {
 
   async deleteProduct(id, token) {
     return this.request(`/products/${id}`, "DELETE", null, token);
-  },
-
-  async getUserProducts(token) {
-    return this.request("/products/my-products", "GET", null, token);
   },
 
   async getAuctionById(id) {
