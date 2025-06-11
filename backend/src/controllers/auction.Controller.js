@@ -180,3 +180,13 @@ export const getUserStats = async (req, res) => {
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
+
+export const getAuctionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auction = await AuctionService.getAuctionById(id);
+    res.status(200).json(auction);
+  } catch (error) {
+    handleHttpError(res, "GET_AUCTION_ERROR", error, error.status || 500);
+  }
+};

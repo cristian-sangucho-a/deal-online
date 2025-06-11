@@ -352,6 +352,32 @@ class AuctionService {
 
     return stats;
   }
+
+  async getAuctionById(auctionId) {
+      const auction = await Auction.findByPk(auctionId, {
+        include: [
+          {
+            model: Product,
+            as: "product",
+            include: [{ model: User, as: "seller" }]
+          },
+          {
+            model: Bid,
+            as: "bids",
+            include: [{ model: User, as: "bidder" }],
+            order: [["amount", "DESC"]]
+          },
+          {
+            model: Bid,
+            as: "winning_bid",
+            include: [{ model: User, as: "bidder" }]
+          }
+        ]
+      });
+      
+      if (!auction) throw new CustomError("Subasta no encontrada", 404);
+      return auction;
+  }
 }
 
 export default new AuctionService();

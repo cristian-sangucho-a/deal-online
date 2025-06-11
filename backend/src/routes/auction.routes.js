@@ -10,7 +10,8 @@ import {
   getAllActiveAuctions,
   getUserProducts,
   getUserBids,
-  getUserStats
+  getUserStats,
+  getAuctionById
 } from "../controllers/auction.Controller.js";
 import verifyToken from "../middlewares/auth.middleware.js";
 
@@ -32,5 +33,7 @@ router.get("/my-stats", verifyToken, getUserStats);
 router.get("/products", getAllProducts);
 router.get("/products/:id", getProductById);
 router.get("/auctions/active", getAllActiveAuctions);
+// Agregar esta línea con las demás rutas públicas
+router.get("/auctions/:id", getAuctionById);
 
 export default router;
