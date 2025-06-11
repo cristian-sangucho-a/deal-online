@@ -1,7 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import Header from "../../components/Header.astro";
-import AuctionChat from "../../components/AuctionChat.astro";
 import { api } from "../../services/api.js";
 
 export async function getStaticPaths() {
@@ -23,6 +22,8 @@ const { id } = Astro.params;
 const { product } = Astro.props;
 
 let finalProduct = product;
+console.log("Product from props:", finalProduct);
+console.log("Product ID from params:", finalProduct.auction.status);
 let error = null;
 
 if (!finalProduct) {
@@ -127,7 +128,7 @@ if (!finalProduct && !error) {
               </div>
             </div>
 
-            {finalProduct.Auction ? (
+            {finalProduct.auction ? (
               <div id="auction-section" class="border-t pt-6">
                 <div class="bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg p-6">
                   <div class="flex items-center justify-between mb-4">
@@ -136,12 +137,12 @@ if (!finalProduct && !error) {
                     </h3>
                     <span
                       class={`px-3 py-1 rounded-full text-sm font-medium ${
-                        finalProduct.Auction.status === "active"
+                        finalProduct.auction.status === "active"
                           ? "bg-success-100 text-success-800"
                           : "bg-gray-100 text-gray-800"
                       }`}
                     >
-                      {finalProduct.Auction.status === "active"
+                      {finalProduct.auction.status === "active"
                         ? "Activa"
                         : "Finalizada"}
                     </span>
@@ -151,7 +152,7 @@ if (!finalProduct && !error) {
                     <div>
                       <p class="text-sm text-gray-600">Precio actual</p>
                       <p class="text-2xl font-bold text-primary-600">
-                        ${finalProduct.Auction.current_price.toLocaleString()}
+                        ${parseFloat(finalProduct.auction.current_price).toLocaleString()}
                       </p>
                     </div>
                     <div>
@@ -163,76 +164,14 @@ if (!finalProduct && !error) {
                     </div>
                   </div>
 
-                  {finalProduct.Auction.status === "active" && (
-                    <div id="bid-form-container">
-                      <form id="bid-form" class="space-y-4">
-                        <div>
-                          <label
-                            for="bid-amount"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Tu oferta (mínimo $
-                            {(
-                              finalProduct.Auction.current_price + 1
-                            ).toLocaleString()}
-                            )
-                          </label>
-                          <input
-                            type="number"
-                            id="bid-amount"
-                            name="amount"
-                            min={finalProduct.Auction.current_price + 1}
-                            step="0.01"
-                            required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                            placeholder={`${finalProduct.Auction.current_price + 1}`}
-                          />
-                        </div>
-
-                        <div>
-                          <label
-                            for="bid-message"
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Mensaje (opcional)
-                          </label>
-                          <textarea
-                            id="bid-message"
-                            name="message"
-                            rows="2"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                            placeholder="Añade un mensaje a tu oferta..."
-                          />
-                        </div>
-
-                        <button
-                          type="submit"
-                          id="bid-button"
-                          class="w-full bg-primary-500 text-white py-3 px-4 rounded-lg hover:bg-primary-600 transition-colors font-medium"
-                        >
-                          Hacer Oferta
-                        </button>
-                      </form>
-
-                      <div id="auth-required" class="hidden text-center py-4">
-                        <p class="text-gray-600 mb-4">
-                          Debes iniciar sesión para hacer una oferta
-                        </p>
-                        <div class="space-x-4">
-                          <a
-                            href="/login"
-                            class="bg-primary-500 text-white px-6 py-2 rounded-lg hover:bg-primary-600 transition-colors"
-                          >
-                            Iniciar Sesión
-                          </a>
-                          <a
-                            href="/register"
-                            class="text-primary-600 hover:text-primary-500"
-                          >
-                            Registrarse
-                          </a>
-                        </div>
-                      </div>
+                  {finalProduct.auction.status === "active" && (
+                    <div class="text-center">
+                      <a
+                        href={`/chat/${finalProduct.auction.id}`}
+                        class="inline-block w-full bg-primary-500 text-white py-3 px-4 rounded-lg hover:bg-primary-600 transition-colors font-medium text-center"
+                      >
+                        Hacer Oferta
+                      </a>
                     </div>
                   )}
                 </div>
@@ -247,23 +186,14 @@ if (!finalProduct && !error) {
               </div>
             )}
 
-            {/* Aquí integramos AuctionChat */}
-            {finalProduct.Auction && (
-              <AuctionChat
-                auctionId={finalProduct.Auction.id}
-                currentPrice={finalProduct.Auction.current_price}
-                auctionStatus={finalProduct.Auction.status}
-              />
-            )}
-
-            {finalProduct.Auction?.bids &&
-              finalProduct.Auction.bids.length > 0 && (
+            {finalProduct.auction?.bids &&
+              finalProduct.auction.bids.length > 0 && (
                 <div class="border-t pt-6">
                   <h3 class="text-lg font-semibold text-gray-900 mb-4">
                     Historial de Ofertas
                   </h3>
                   <div class="space-y-3 max-h-64 overflow-y-auto">
-                    {finalProduct.Auction.bids.map((bid) => (
+                    {finalProduct.auction.bids.map((bid) => (
                       <div
                         class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                         key={bid.id}
@@ -308,32 +238,12 @@ if (!finalProduct && !error) {
 </Layout>
 
 <script define:vars={{ finalProduct }}>
-  import { $user, $token } from "../../stores/authStore.js";
-  import { api } from "../../services/api.js";
-
-  // Check authentication status
-  function checkAuth() {
-    const token = $token.get();
-    const user = $user.get();
-
-    const bidFormContainer = document.getElementById("bid-form-container");
-    const authRequired = document.getElementById("auth-required");
-
-    if (token && user) {
-      bidFormContainer?.classList.remove("hidden");
-      authRequired?.classList.add("hidden");
-    } else {
-      bidFormContainer?.classList.add("hidden");
-      authRequired?.classList.remove("hidden");
-    }
-  }
-
   // Update countdown timer for auction
   function updateCountdown() {
-    if (!finalProduct.Auction || finalProduct.Auction.status !== "active")
+    if (!finalProduct.auction || finalProduct.auction.status !== "active")
       return;
 
-    const endTime = new Date(finalProduct.Auction.end_time);
+    const endTime = new Date(finalProduct.auction.end_time);
     const now = new Date();
     const diff = endTime.getTime() - now.getTime();
 
@@ -343,84 +253,26 @@ if (!finalProduct && !error) {
     if (diff <= 0) {
       countdownEl.textContent = "Subasta finalizada";
       countdownEl.className = "text-lg font-semibold text-error-600";
-      document.getElementById("bid-form-container")?.classList.add("hidden");
       return;
     }
 
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const totalHours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-    let timeString = "";
-    if (days > 0) {
-      timeString = `${days}d ${hours}h ${minutes}m`;
-    } else if (hours > 0) {
-      timeString = `${hours}h ${minutes}m ${seconds}s`;
-    } else {
-      timeString = `${minutes}m ${seconds}s`;
-      countdownEl.className =
-        "text-lg font-semibold text-error-600 animate-pulse";
-    }
-
+    const timeString = `${totalHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
     countdownEl.textContent = timeString;
+    
+    if (totalHours < 1) {
+      countdownEl.className = "text-lg font-semibold text-error-600 animate-pulse";
+    }
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    checkAuth();
-
-    if (finalProduct.Auction && finalProduct.Auction.status === "active") {
+    if (finalProduct.auction && finalProduct.auction.status === "active") {
       updateCountdown();
       setInterval(updateCountdown, 1000);
-    }
-
-    const bidForm = document.getElementById("bid-form");
-    if (bidForm) {
-      bidForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        const amountInput = bidForm.querySelector("#bid-amount");
-        const messageInput = bidForm.querySelector("#bid-message");
-        const bidButton = document.getElementById("bid-button");
-
-        if (!amountInput || !bidButton) return;
-
-        const amount = parseFloat(amountInput.value);
-        if (isNaN(amount) || amount <= finalProduct.Auction.current_price) {
-          alert("Por favor ingresa un monto válido mayor al precio actual.");
-          return;
-        }
-
-        bidButton.disabled = true;
-        bidButton.textContent = "Enviando...";
-
-        try {
-          const token = $token.get();
-          if (!token) throw new Error("No autenticado");
-
-          const bidData = {
-            auctionId: finalProduct.Auction.id,
-            amount,
-            message: messageInput.value || "",
-          };
-
-          const response = await api.placeBid(bidData, token);
-          if (response.success) {
-            alert("Oferta realizada con éxito");
-            location.reload();
-          } else {
-            alert(
-              "Error al realizar la oferta: " +
-                (response.message || "Intente de nuevo"),
-            );
-          }
-        } catch (err) {
-          alert("Error al realizar la oferta: " + err.message);
-        } finally {
-          bidButton.disabled = false;
-          bidButton.textContent = "Hacer Oferta";
-        }
-      });
     }
   });
 </script>

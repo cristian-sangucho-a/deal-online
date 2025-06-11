@@ -234,6 +234,150 @@ class AuctionService {
       offset,
     });
   }
+
+  async getUserProducts(userId) {
+    return await Product.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: Auction,
+          as: "auction",
+          attributes: [
+            "id",
+            "status",
+            "current_price",
+            "end_time",
+            "winning_bid_id",
+            "start_time"
+          ],
+          include: [
+            {
+              model: Bid,
+              as: "bids",
+              attributes: ["id", "amount", "createdAt"],
+              include: [
+                { model: User, as: "bidder", attributes: ["id", "nombre"] }
+              ]
+            }
+          ]
+        }
+      ],
+      order: [["createdAt", "DESC"]]
+    });
+  }
+
+  async getUserBids(userId) {
+    return await Bid.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: Auction,
+          as: "auction",
+          attributes: ["id", "status", "current_price", "end_time", "winning_bid_id"],
+          include: [
+            {
+              model: Product,
+              as: "product",
+              attributes: ["id", "name", "image_url", "description"]
+            }
+          ]
+        }
+      ],
+      order: [["createdAt", "DESC"]]
+    });
+  }
+
+  async getUserStats(userId) {
+    // Obtener productos del usuario
+    const userProducts = await Product.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: Auction,
+          as: "auction",
+          attributes: ["id", "status", "current_price", "end_time", "winning_bid_id"]
+        }
+      ]
+    });
+
+    // Obtener ofertas del usuario
+    const userBids = await Bid.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: Auction,
+          as: "auction",
+          attributes: ["id", "status", "winning_bid_id"],
+          include: [
+            {
+              model: Product,
+              as: "product",
+              attributes: ["id", "name"]
+            }
+          ]
+        }
+      ]
+    });
+
+    // Calcular estadísticas
+    const stats = {
+      totalProducts: userProducts.length,
+      activeAuctions: userProducts.filter(p => p.auction?.status === 'active').length,
+      totalBids: userBids.length,
+      wonAuctions: userBids.filter(bid => 
+        bid.auction?.status === 'closed' && 
+        bid.auction?.winning_bid_id === bid.id
+      ).length,
+      recentActivity: []
+    };
+
+    // Agregar actividad reciente
+    const recentProducts = userProducts.slice(0, 3).map(product => ({
+      type: 'product',
+      date: product.createdAt,
+      content: `Publicaste "${product.name}"`,
+      link: `/products/${product.id}`
+    }));
+
+    const recentBids = userBids.slice(0, 3).map(bid => ({
+      type: 'bid',
+      date: bid.createdAt,
+      content: `Ofertaste $${bid.amount.toLocaleString()} en "${bid.auction?.product?.name || 'Producto'}"`,
+      link: `/products/${bid.auction?.product?.id}`
+    }));
+
+    stats.recentActivity = [...recentProducts, ...recentBids]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 5);
+
+    return stats;
+  }
+
+  async getAuctionById(auctionId) {
+      const auction = await Auction.findByPk(auctionId, {
+        include: [
+          {
+            model: Product,
+            as: "product",
+            include: [{ model: User, as: "seller" }]
+          },
+          {
+            model: Bid,
+            as: "bids",
+            include: [{ model: User, as: "bidder" }],
+            order: [["amount", "DESC"]]
+          },
+          {
+            model: Bid,
+            as: "winning_bid",
+            include: [{ model: User, as: "bidder" }]
+          }
+        ]
+      });
+      
+      if (!auction) throw new CustomError("Subasta no encontrada", 404);
+      return auction;
+  }
 }
 
 export default new AuctionService();
