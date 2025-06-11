@@ -5,30 +5,47 @@ export interface Props {
     name: string;
     description: string;
     image_url?: string;
-    Auction?: {
-      id: number;
-      current_price: number;
-      end_time: string;
-      status: string;
-      _count?: {
-        bids: number;
+    auction?: {
+      id?: number;
+      current_price?: number;
+      end_time?: string;
+      status?: string;
+      bids?: Array<{
+        id?: number;
+        amount?: number;
+        bidder?: {
+          id?: number;
+          nombre?: string;
+        };
+      }>;
+      winning_bid?: {
+        id?: number;
+        amount?: number;
+        bidder?: {
+          id?: number;
+          nombre?: string;
+        };
       };
     };
   };
 }
 
 const { product } = Astro.props;
-const hasAuction = product.Auction && product.Auction.status === 'closed';
-const endTime = hasAuction ? new Date(product.Auction.end_time) : null;
+const auction = product?.auction ?? {};
+const hasAuction = auction?.status && auction.status !== 'closed';
+const bidsCount = auction?.bids?.length ?? 0;
+const endTime = auction?.end_time ? new Date(auction.end_time) : null;
 const isEnding = endTime && (endTime.getTime() - Date.now()) < 24 * 60 * 60 * 1000; // 24 hours
+const currentPrice = auction?.current_price ?? 0;
 ---
 
 <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
   <div class="relative">
     <img 
-      src={product.image_url || 'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=800'} 
-      alt={product.name}
+      src={product?.image_url || 'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=800'} 
+      alt={product?.name || 'Producto'}
       class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+      loading="lazy"
     />
     
     {hasAuction && (
@@ -45,53 +62,53 @@ const isEnding = endTime && (endTime.getTime() - Date.now()) < 24 * 60 * 60 * 10
       </div>
     )}
     
-    {product.Auction?._count?.bids && (
+    {bidsCount > 0 && (
       <div class="absolute top-3 right-3 bg-black/70 text-white px-2 py-1 rounded-full text-xs">
-        {product.Auction._count.bids} ofertas
+        {bidsCount} {bidsCount === 1 ? 'oferta' : 'ofertas'}
       </div>
     )}
   </div>
 
   <div class="p-4">
     <h3 class="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
-      {product.name}
+      {product?.name || 'Nombre no disponible'}
     </h3>
     
     <p class="text-gray-600 text-sm mb-3 line-clamp-2">
-      {product.description}
+      {product?.description || 'Descripción no disponible'}
     </p>
 
-    {hasAuction && (
+    {hasAuction ? (
       <div class="space-y-2">
         <div class="flex items-center justify-between">
           <span class="text-sm text-gray-500">Precio actual:</span>
           <span class="text-xl font-bold text-primary-600">
-            ${product.Auction.current_price.toLocaleString()}
+            ${currentPrice.toLocaleString()}
           </span>
         </div>
         
-        <div class="flex items-center justify-between text-sm">
-          <span class="text-gray-500">Termina:</span>
-          <span class={`font-medium ${isEnding ? 'text-error-600' : 'text-gray-700'}`}>
-            <span id={`countdown-${product.id}`}></span>
-          </span>
-        </div>
+        {endTime && (
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-500">Termina:</span>
+            <span class={`font-medium ${isEnding ? 'text-error-600' : 'text-gray-700'}`}>
+              <span id={`countdown-${product?.id}`}></span>
+            </span>
+          </div>
+        )}
         
         <div class="mt-4">
           <a 
-            href={`/products/${product.id}`}
+            href={`/products/${product?.id}`}
             class="w-full bg-primary-500 text-white py-2 px-4 rounded-lg hover:bg-primary-600 transition-colors text-center block font-medium"
           >
-            Ver Detalles
+            {bidsCount > 0 ? 'Pujar Ahora' : 'Hacer Primera Oferta'}
           </a>
         </div>
       </div>
-    )}
-
-    {!hasAuction && (
+    ) : (
       <div class="mt-4">
         <a 
-          href={`/products/${product.id}`}
+          href={`/products/${product?.id}`}
           class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-center block font-medium"
         >
           Ver Producto
@@ -101,9 +118,11 @@ const isEnding = endTime && (endTime.getTime() - Date.now()) < 24 * 60 * 60 * 10
   </div>
 </div>
 
-{hasAuction && (
-  <script define:vars={{ productId: product.id, endTime: product.Auction.end_time }}>
+{hasAuction && endTime && (
+  <script define:vars={{ productId: product?.id, endTime: auction?.end_time }}>
     function updateCountdown() {
+      if (!endTime) return;
+      
       const endDate = new Date(endTime);
       const now = new Date();
       const diff = endDate.getTime() - now.getTime();

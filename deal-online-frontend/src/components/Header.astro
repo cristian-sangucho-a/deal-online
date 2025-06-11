@@ -1,5 +1,5 @@
 ---
-import { $user, $token } from '../stores/authStore.js';
+// No imports de stores aquí - se manejan en el cliente
 ---
 
 <header class="bg-white shadow-sm border-b border-gray-200">
@@ -27,7 +27,11 @@ import { $user, $token } from '../stores/authStore.js';
       <!-- Auth buttons -->
       <div class="flex items-center space-x-4">
         <div id="auth-buttons">
-          <!-- This will be populated by client-side script -->
+          <!-- Loading state -->
+          <div class="flex items-center space-x-4">
+            <div class="animate-pulse bg-gray-200 h-6 w-20 rounded"></div>
+            <div class="animate-pulse bg-gray-200 h-8 w-24 rounded-lg"></div>
+          </div>
         </div>
         
         <!-- Mobile menu button -->
@@ -46,80 +50,237 @@ import { $user, $token } from '../stores/authStore.js';
       <a href="/" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Inicio</a>
       <a href="/auctions" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Subastas</a>
       <a href="/products" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Productos</a>
+      <!-- Mobile auth items will be added here by JS -->
+      <div id="mobile-auth-items"></div>
     </div>
   </div>
 </header>
 
 <script>
-  import { $user, $token, authActions } from '../stores/authStore.js';
+  // Solo ejecutar en el cliente
+  if (typeof window !== 'undefined') {
+    // Importar dinámicamente los stores
+    import('../stores/authStore.js').then(({ $user, $token, authActions }) => {
+      let currentMenuTimeout;
 
-  function renderAuthButtons() {
-    const authButtonsContainer = document.getElementById('auth-buttons');
-    const user = $user.get();
-    const token = $token.get();
+      function renderAuthButtons() {
+        const authButtonsContainer = document.getElementById('auth-buttons');
+        const mobileAuthItems = document.getElementById('mobile-auth-items');
+        
+        if (!authButtonsContainer) return;
 
-    if (!authButtonsContainer) return;
+        try {
+          const user = $user.get();
+          const token = $token.get();
 
-    if (user && token) {
-      authButtonsContainer.innerHTML = `
-        <div class="flex items-center space-x-4">
-          <a href="/dashboard" class="text-gray-700 hover:text-primary-600 transition-colors">
-            Dashboard
-          </a>
-          <a href="/createProduct" class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors">
-            Vender
-          </a>
-          <div class="relative group">
-            <button class="flex items-center space-x-2 text-gray-700 hover:text-primary-600">
-              <span class="font-medium">${user.nombre}</span>
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-              </svg>
-            </button>
-            <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
-              <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mi Perfil</a>
-              <a href="/my-auctions" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mis Subastas</a>
-              <a href="/my-bids" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mis Ofertas</a>
-              <button id="logout-btn" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                Cerrar Sesión
-              </button>
+          if (user && token) {
+            // Desktop auth buttons
+            authButtonsContainer.innerHTML = `
+              <div class="flex items-center space-x-4">
+                <a href="/dashboard" class="text-gray-700 hover:text-primary-600 transition-colors">
+                  Dashboard
+                </a>
+                <a href="/createProduct" class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors">
+                  Vender
+                </a>
+                <div class="relative">
+                  <button id="user-menu-button" class="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors">
+                    <span class="font-medium">${user.nombre}</span>
+                    <svg class="w-4 h-4 transition-transform duration-200" id="dropdown-arrow" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                  </button>
+                  <div id="user-menu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden border border-gray-200 transform opacity-0 scale-95 transition-all duration-200">
+                    <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">Mi Perfil</a>
+                    <a href="/my-auctions" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">Mis Subastas</a>
+                    <a href="/my-bids" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">Mis Ofertas</a>
+                    <hr class="my-1 border-gray-200">
+                    <button id="logout-btn" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      Cerrar Sesión
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+
+            // Mobile auth items
+            if (mobileAuthItems) {
+              mobileAuthItems.innerHTML = `
+                <hr class="my-2 border-gray-200">
+                <a href="/dashboard" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Dashboard</a>
+                <a href="/createProduct" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Vender</a>
+                <a href="/profile" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Mi Perfil</a>
+                <a href="/my-auctions" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Mis Subastas</a>
+                <a href="/my-bids" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Mis Ofertas</a>
+                <button id="mobile-logout-btn" class="block w-full text-left px-3 py-2 text-gray-700 hover:text-primary-600">
+                  Cerrar Sesión
+                </button>
+              `;
+            }
+
+            // Setup dropdown menu interactions
+            setupDropdownMenu();
+            
+            // Setup logout buttons
+            setupLogoutButtons(authActions);
+
+          } else {
+            // Not authenticated
+            authButtonsContainer.innerHTML = `
+              <div class="flex items-center space-x-4">
+                <a href="/login" class="text-gray-700 hover:text-primary-600 transition-colors">
+                  Iniciar Sesión
+                </a>
+                <a href="/register" class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors">
+                  Registrarse
+                </a>
+              </div>
+            `;
+
+            // Mobile auth items
+            if (mobileAuthItems) {
+              mobileAuthItems.innerHTML = `
+                <hr class="my-2 border-gray-200">
+                <a href="/login" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Iniciar Sesión</a>
+                <a href="/register" class="block px-3 py-2 text-gray-700 hover:text-primary-600">Registrarse</a>
+              `;
+            }
+          }
+        } catch (error) {
+          console.error('Error rendering auth buttons:', error);
+          // Fallback to login/register buttons
+          authButtonsContainer.innerHTML = `
+            <div class="flex items-center space-x-4">
+              <a href="/login" class="text-gray-700 hover:text-primary-600 transition-colors">
+                Iniciar Sesión
+              </a>
+              <a href="/register" class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors">
+                Registrarse
+              </a>
             </div>
-          </div>
-        </div>
-      `;
+          `;
+        }
+      }
 
-      const logoutBtn = document.getElementById('logout-btn');
-      logoutBtn?.addEventListener('click', async () => {
-        await authActions.logout();
-        window.location.href = '/';
+      function setupDropdownMenu() {
+        const menuButton = document.getElementById('user-menu-button');
+        const menu = document.getElementById('user-menu');
+        const arrow = document.getElementById('dropdown-arrow');
+
+        if (!menuButton || !menu) return;
+
+        const showMenu = () => {
+          clearTimeout(currentMenuTimeout);
+          menu.classList.remove('hidden');
+          // Trigger animation
+          setTimeout(() => {
+            menu.classList.remove('opacity-0', 'scale-95');
+            menu.classList.add('opacity-100', 'scale-100');
+            arrow?.classList.add('rotate-180');
+          }, 10);
+        };
+
+        const hideMenu = () => {
+          currentMenuTimeout = setTimeout(() => {
+            menu.classList.remove('opacity-100', 'scale-100');
+            menu.classList.add('opacity-0', 'scale-95');
+            arrow?.classList.remove('rotate-180');
+            // Hide after animation
+            setTimeout(() => {
+              menu.classList.add('hidden');
+            }, 200);
+          }, 150);
+        };
+
+        // Click to toggle
+        menuButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (menu.classList.contains('hidden')) {
+            showMenu();
+          } else {
+            hideMenu();
+          }
+        });
+
+        // Hover interactions
+        menuButton.addEventListener('mouseenter', showMenu);
+        menu.addEventListener('mouseenter', showMenu);
+        menuButton.addEventListener('mouseleave', hideMenu);
+        menu.addEventListener('mouseleave', hideMenu);
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!menu.contains(e.target) && !menuButton.contains(e.target)) {
+            hideMenu();
+          }
+        });
+
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+            hideMenu();
+          }
+        });
+      }
+
+      function setupLogoutButtons(authActions) {
+        const logoutBtn = document.getElementById('logout-btn');
+        const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+
+        const handleLogout = async (e) => {
+          e.preventDefault();
+          try {
+            await authActions.logout();
+            window.location.href = '/';
+          } catch (error) {
+            console.error('Error during logout:', error);
+            // Even if logout fails, redirect to home
+            window.location.href = '/';
+          }
+        };
+
+        logoutBtn?.addEventListener('click', handleLogout);
+        mobileLogoutBtn?.addEventListener('click', handleLogout);
+      }
+
+      // Initial render
+      renderAuthButtons();
+
+      // Listen for auth state changes
+      $user.subscribe(() => renderAuthButtons());
+      $token.subscribe(() => renderAuthButtons());
+
+      // Mobile menu toggle
+      const mobileMenuButton = document.getElementById('mobile-menu-button');
+      const mobileMenu = document.getElementById('mobile-menu');
+
+      mobileMenuButton?.addEventListener('click', () => {
+        mobileMenu?.classList.toggle('hidden');
       });
-    } else {
-      authButtonsContainer.innerHTML = `
-        <div class="flex items-center space-x-4">
-          <a href="/login" class="text-gray-700 hover:text-primary-600 transition-colors">
-            Iniciar Sesión
-          </a>
-          <a href="/register" class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors">
-            Registrarse
-          </a>
-        </div>
-      `;
-    }
+
+      // Close mobile menu when clicking outside
+      document.addEventListener('click', (e) => {
+        if (mobileMenu && !mobileMenu.contains(e.target) && !mobileMenuButton?.contains(e.target)) {
+          mobileMenu.classList.add('hidden');
+        }
+      });
+
+    }).catch(error => {
+      console.error('Error loading auth store:', error);
+      // Fallback rendering
+      const authButtonsContainer = document.getElementById('auth-buttons');
+      if (authButtonsContainer) {
+        authButtonsContainer.innerHTML = `
+          <div class="flex items-center space-x-4">
+            <a href="/login" class="text-gray-700 hover:text-primary-600 transition-colors">
+              Iniciar Sesión
+            </a>
+            <a href="/register" class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors">
+              Registrarse
+            </a>
+          </div>
+        `;
+      }
+    });
   }
-
-  // Initial render
-  renderAuthButtons();
-
-  // Listen for auth state changes
-  $user.subscribe(() => renderAuthButtons());
-  $token.subscribe(() => renderAuthButtons());
-
-  // Mobile menu toggle
-  const mobileMenuButton = document.getElementById('mobile-menu-button');
-  const mobileMenu = document.getElementById('mobile-menu');
-
-  mobileMenuButton?.addEventListener('click', () => {
-    mobileMenu?.classList.toggle('hidden');
-  });
 </script>
-</header>

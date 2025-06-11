@@ -46,7 +46,6 @@ export const api = {
       if (error instanceof ApiError) {
         throw error;
       }
-      // For connection errors, throw a specific error that can be caught
       throw new ApiError("Error de conexión", 0, null);
     }
   },
@@ -58,6 +57,10 @@ export const api = {
 
   async verifyRegistration(email, verificationCode) {
     return this.request("/auth/verify", "POST", { email, verificationCode });
+  },
+
+  async resendVerificationCode(email) {
+    return this.request("/auth/resend-verification", "POST", { email });
   },
 
   async login(email, password) {
@@ -73,11 +76,15 @@ export const api = {
   },
 
   async requestPasswordReset(email) {
-    return this.request("/auth/forgot-password", "POST", { email });
+    return this.request("/auth/request-password-reset", "POST", { email });
   },
 
-  async resetPassword(token, newPassword) {
-    return this.request("/auth/reset-password", "POST", { token, newPassword });
+  async verifyResetCode(email, verificationCode) {
+    return this.request("/auth/verify-reset-code", "POST", { email, verificationCode });
+  },
+
+  async resetPassword(email, verificationCode, newPassword) {
+    return this.request("/auth/reset-password", "POST", { email, verificationCode, newPassword });
   },
 
   // Product endpoints
@@ -86,18 +93,15 @@ export const api = {
   },
 
   async getAllProducts(params = {}) {
-    // Construir query parameters si se proporcionan
     const queryParams = new URLSearchParams();
     if (params.page) queryParams.append("page", params.page);
     if (params.limit) queryParams.append("limit", params.limit);
     if (params.search) queryParams.append("search", params.search);
     if (params.category) queryParams.append("category", params.category);
     if (params.status) queryParams.append("status", params.status);
-    const endpoint = `/products${queryParams.toString() ? "?" + queryParams.toString() : ""
-      }`;
+    const endpoint = `/products${queryParams.toString() ? "?" + queryParams.toString() : ""}`;
     try {
       const response = await this.request(endpoint, "GET");
-      // Si la respuesta es un array directamente, normalizarla
       if (Array.isArray(response)) {
         return {
           products: response,
@@ -105,7 +109,6 @@ export const api = {
           page: params.page || 1,
         };
       }
-
       return response;
     } catch (error) {
       console.error("❌ Error en API /products:", {
@@ -167,8 +170,6 @@ export const api = {
     return this.request(`/bids/auction/${auctionId}`);
   },
 
-  // User endpoints
-
   // Chat endpoints
   async sendChatMessage(auctionId, message, isBid = false, bidAmount = null, token) {
     return this.request('/chat', 'POST', {
@@ -179,8 +180,18 @@ export const api = {
     }, token);
   },
 
-  async getChatMessages(auctionId, token) {
-    return this.request(`/chat/${auctionId}`, 'GET', null, token);
+  async sendChatMessage(token, { auction_id, message, bid_amount = null, is_bid = false }) {
+    return this.request(
+      "/chat",
+      "POST",
+      {
+        auction_id,
+        message,
+        bid_amount,
+        is_bid,
+      },
+      token
+    );
   },
 
   // User endpoints
@@ -191,5 +202,4 @@ export const api = {
   async updateUserProfile(userData, token) {
     return this.request('/users/profile', 'PUT', userData, token);
   },
-
 };
