@@ -93,9 +93,8 @@ export const api = {
     if (params.search) queryParams.append("search", params.search);
     if (params.category) queryParams.append("category", params.category);
     if (params.status) queryParams.append("status", params.status);
-    const endpoint = `/products${
-      queryParams.toString() ? "?" + queryParams.toString() : ""
-    }`;
+    const endpoint = `/products${queryParams.toString() ? "?" + queryParams.toString() : ""
+      }`;
     try {
       const response = await this.request(endpoint, "GET");
       // Si la respuesta es un array directamente, normalizarla
@@ -169,33 +168,28 @@ export const api = {
   },
 
   // User endpoints
+
   // Chat endpoints
-  async getChatMessages(auctionId) {
-    return this.request(`/chat/${auctionId}`);
+  async sendChatMessage(auctionId, message, isBid = false, bidAmount = null, token) {
+    return this.request('/chat', 'POST', {
+      auction_id: auctionId,
+      message,
+      is_bid: isBid,
+      bid_amount: bidAmount
+    }, token);
   },
 
-  async sendChatMessage(
-    token,
-    { auction_id, message, bid_amount = null, is_bid = false }
-  ) {
-    return this.request(
-      "/chat",
-      "POST",
-      {
-        auction_id,
-        message,
-        bid_amount,
-        is_bid,
-      },
-      token
-    );
+  async getChatMessages(auctionId, token) {
+    return this.request(`/chat/${auctionId}`, 'GET', null, token);
   },
 
+  // User endpoints
   async getUserProfile(token) {
-    return this.request("/users/profile", "GET", null, token);
+    return this.request('/users/profile', 'GET', null, token);
   },
 
   async updateUserProfile(userData, token) {
-    return this.request("/users/profile", "PUT", userData, token);
+    return this.request('/users/profile', 'PUT', userData, token);
   },
+
 };
