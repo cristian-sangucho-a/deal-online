@@ -171,8 +171,13 @@ export const api = {
   },
 
   // Chat endpoints
-  async getChatMessages(auctionId) {
-    return this.request(`/chat/${auctionId}`);
+  async sendChatMessage(auctionId, message, isBid = false, bidAmount = null, token) {
+    return this.request('/chat', 'POST', {
+      auction_id: auctionId,
+      message,
+      is_bid: isBid,
+      bid_amount: bidAmount
+    }, token);
   },
 
   async sendChatMessage(token, { auction_id, message, bid_amount = null, is_bid = false }) {
@@ -191,10 +196,10 @@ export const api = {
 
   // User endpoints
   async getUserProfile(token) {
-    return this.request("/users/profile", "GET", null, token);
+    return this.request('/users/profile', 'GET', null, token);
   },
 
   async updateUserProfile(userData, token) {
-    return this.request("/users/profile", "PUT", userData, token);
+    return this.request('/users/profile', 'PUT', userData, token);
   },
 };
