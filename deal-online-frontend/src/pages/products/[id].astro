@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
+import AuctionChat from '../../components/AuctionChat.astro';
 import { api } from '../../services/api.js';
 
 export async function getStaticPaths() {
@@ -187,6 +188,15 @@ if (!finalProduct && !error) {
                 <p class="text-gray-600">Este producto no tiene una subasta activa</p>
               </div>
             </div>
+          )}
+
+          <!-- Chat Section -->
+          {product.Auction && (
+            <AuctionChat 
+              auctionId={product.Auction.id} 
+              currentPrice={product.Auction.current_price}
+              auctionStatus={product.Auction.status}
+            />
           )}
 
           <!-- Bids History -->
