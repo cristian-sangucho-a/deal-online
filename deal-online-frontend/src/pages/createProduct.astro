@@ -329,6 +329,7 @@ import Header from "../components/Header.astro";
 
             // Create product via API
             const response = await api.createProduct(productData, token);
+            const auction_id = response.auction.id;
             console.log('Product created successfully:', response);
             
             showSuccess('Producto creado con éxito.');
@@ -340,7 +341,7 @@ import Header from "../components/Header.astro";
             
             // Redirect after a short delay
             setTimeout(() => {
-                window.location.href = '/products';
+                window.location.href = `/chat/${auction_id}`;
             }, 2000);
 
         } catch (err) {
