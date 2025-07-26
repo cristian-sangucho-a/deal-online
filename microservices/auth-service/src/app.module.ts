@@ -3,9 +3,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/entities/user.entity';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus'; // <-- AÑADIR
 
 @Module({
   imports: [
+    PrometheusModule.register(), // <-- AÑADIR ESTA LÍNEA
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],

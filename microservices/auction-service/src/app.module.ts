@@ -5,9 +5,11 @@ import { AuctionModule } from './auction/auction.module';
 import { Product } from './auction/entities/product.entity';
 import { Auction } from './auction/entities/auction.entity';
 import { Bid } from './auction/entities/bid.entity';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus'; // <-- AÑADIR
 
 @Module({
   imports: [
+    PrometheusModule.register(), // <-- AÑADIR ESTA LÍNEA
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],

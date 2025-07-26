@@ -10,14 +10,17 @@ volumes:
   auction_db_data:
   chat_db_data:
   rabbitmq_data:
+  prometheus_data:
+  grafana_data:
 
 # ================================================================
-# SERVICIOS DE INFRAESTRUCTURA
+# SERVICIOS DE INFRAESTRUCTURA Y MONITOREO
 # ================================================================
 services:
   rabbitmq:
     image: rabbitmq:3.9-management-alpine
     container_name: rabbitmq
+    restart: always
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -28,14 +31,36 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=user
       - RABBITMQ_DEFAULT_PASS=password
-    # --- INICIO DE LA CORRECCIÓN ---
-    # Este chequeo de salud verifica que RabbitMQ esté listo para aceptar conexiones.
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    # --- FIN DE LA CORRECCIÓN ---
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - deal-network
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3005:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - deal-network
+    depends_on:
+      - prometheus
 
   # ================================================================
   # BASES DE DATOS DEDICADAS
@@ -51,7 +76,7 @@ services:
     volumes:
       - auth_db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5431:5432"
     networks:
       - deal-network
 
@@ -86,7 +111,7 @@ services:
       - deal-network
 
   # ================================================================
-  # PUNTO DE ENTRADA (API GATEWAY)
+  # PUNTO DE ENTRADA Y MICROSERVICIOS
   # ================================================================
   api-gateway:
     build:
@@ -94,7 +119,7 @@ services:
     container_name: api-gateway
     restart: always
     ports:
-      - "3000:3000"
+      - "3050:3000" # <-- CORRECCIÓN: Cambiado de 3000 a 3050
     env_file:
       - ./api-gateway/.env
     networks:
@@ -104,9 +129,6 @@ services:
       - auction-service
       - chat-service
 
-  # ================================================================
-  # MICROSERVICIOS
-  # ================================================================
   auth-service:
     build:
       context: ./microservices/auth-service
@@ -119,11 +141,8 @@ services:
     depends_on:
       auth-db:
         condition: service_started
-      # --- INICIO DE LA CORRECCIÓN ---
-      # Ahora espera a que el healthcheck de RabbitMQ pase.
       rabbitmq:
         condition: service_healthy
-      # --- FIN DE LA CORRECCIÓN ---
 
   auction-service:
     build:
@@ -161,8 +180,5 @@ services:
     networks:
       - deal-network
     depends_on:
-      # --- INICIO DE LA CORRECCIÓN ---
-      # Ahora espera a que el healthcheck de RabbitMQ pase.
       rabbitmq:
         condition: service_healthy
-      # --- FIN DE LA CORRECCIÓN ---

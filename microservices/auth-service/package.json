@@ -27,6 +27,7 @@
     "@nestjs/microservices": "^11.1.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
+    "@willsoto/nestjs-prometheus": "^6.0.2",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.8",
     "bcrypt": "^6.0.0",
