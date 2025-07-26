@@ -1,0 +1,168 @@
+# ================================================================
+# RED Y VOLÚMENES
+# ================================================================
+networks:
+  deal-network:
+    driver: bridge
+
+volumes:
+  auth_db_data:
+  auction_db_data:
+  chat_db_data:
+  rabbitmq_data:
+
+# ================================================================
+# SERVICIOS DE INFRAESTRUCTURA
+# ================================================================
+services:
+  rabbitmq:
+    image: rabbitmq:3.9-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq/
+    networks:
+      - deal-network
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+    # --- INICIO DE LA CORRECCIÓN ---
+    # Este chequeo de salud verifica que RabbitMQ esté listo para aceptar conexiones.
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # --- FIN DE LA CORRECCIÓN ---
+
+  # ================================================================
+  # BASES DE DATOS DEDICADAS
+  # ================================================================
+  auth-db:
+    image: postgres:14-alpine
+    container_name: auth-db
+    restart: always
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - deal-network
+
+  auction-db:
+    image: postgres:14-alpine
+    container_name: auction-db
+    restart: always
+    environment:
+      POSTGRES_DB: auction_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - auction_db_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - deal-network
+
+  chat-db:
+    image: postgres:14-alpine
+    container_name: chat-db
+    restart: always
+    environment:
+      POSTGRES_DB: chat_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - chat_db_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - deal-network
+
+  # ================================================================
+  # PUNTO DE ENTRADA (API GATEWAY)
+  # ================================================================
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: api-gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./api-gateway/.env
+    networks:
+      - deal-network
+    depends_on:
+      - auth-service
+      - auction-service
+      - chat-service
+
+  # ================================================================
+  # MICROSERVICIOS
+  # ================================================================
+  auth-service:
+    build:
+      context: ./microservices/auth-service
+    container_name: auth-service
+    restart: always
+    env_file:
+      - ./microservices/auth-service/.env
+    networks:
+      - deal-network
+    depends_on:
+      auth-db:
+        condition: service_started
+      # --- INICIO DE LA CORRECCIÓN ---
+      # Ahora espera a que el healthcheck de RabbitMQ pase.
+      rabbitmq:
+        condition: service_healthy
+      # --- FIN DE LA CORRECCIÓN ---
+
+  auction-service:
+    build:
+      context: ./microservices/auction-service
+    container_name: auction-service
+    restart: always
+    env_file:
+      - ./microservices/auction-service/.env
+    networks:
+      - deal-network
+    depends_on:
+      auction-db:
+        condition: service_started
+
+  chat-service:
+    build:
+      context: ./microservices/chat-service
+    container_name: chat-service
+    restart: always
+    env_file:
+      - ./microservices/chat-service/.env
+    networks:
+      - deal-network
+    depends_on:
+      chat-db:
+        condition: service_started
+
+  email-service:
+    build:
+      context: ./microservices/email-service
+    container_name: email-service
+    restart: always
+    env_file:
+      - ./microservices/email-service/.env
+    networks:
+      - deal-network
+    depends_on:
+      # --- INICIO DE LA CORRECCIÓN ---
+      # Ahora espera a que el healthcheck de RabbitMQ pase.
+      rabbitmq:
+        condition: service_healthy
+      # --- FIN DE LA CORRECCIÓN ---
