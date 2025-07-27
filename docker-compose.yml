@@ -119,9 +119,10 @@ services:
     container_name: api-gateway
     restart: always
     ports:
-      - "3050:3000" # <-- CORRECCIÓN: Cambiado de 3000 a 3050
-    env_file:
-      - ./api-gateway/.env
+      - "3050:3000"
+    environment:
+      - PORT=3000
+      - JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA==
     networks:
       - deal-network
     depends_on:
@@ -134,8 +135,16 @@ services:
       context: ./microservices/auth-service
     container_name: auth-service
     restart: always
-    env_file:
-      - ./microservices/auth-service/.env
+    environment:
+      - PORT=3001
+      - JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA==
+      - DB_HOST=auth-db
+      - DB_PORT=5432
+      - DB_USERNAME=user
+      - DB_PASSWORD=password
+      - DB_DATABASE=auth_db
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - RABBITMQ_EMAIL_QUEUE=emails_queue
     networks:
       - deal-network
     depends_on:
@@ -149,8 +158,14 @@ services:
       context: ./microservices/auction-service
     container_name: auction-service
     restart: always
-    env_file:
-      - ./microservices/auction-service/.env
+    environment:
+      - PORT=3002
+      - DB_HOST=auction-db
+      - DB_PORT=5432
+      - DB_USERNAME=user
+      - DB_PASSWORD=password
+      - DB_DATABASE=auction_db
+      - JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA==
     networks:
       - deal-network
     depends_on:
@@ -162,8 +177,14 @@ services:
       context: ./microservices/chat-service
     container_name: chat-service
     restart: always
-    env_file:
-      - ./microservices/chat-service/.env
+    environment:
+      - PORT=3003
+      - DB_HOST=chat-db
+      - DB_PORT=5432
+      - DB_USERNAME=user
+      - DB_PASSWORD=password
+      - DB_DATABASE=chat_db
+      - JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA==
     networks:
       - deal-network
     depends_on:
@@ -175,8 +196,16 @@ services:
       context: ./microservices/email-service
     container_name: email-service
     restart: always
-    env_file:
-      - ./microservices/email-service/.env
+    environment:
+      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - RABBITMQ_EMAIL_QUEUE=emails_queue
+      - EMAIL_FROM_NAME=Deal Online
+      - EMAIL_FROM_ADDRESS=sebasdelpm@gmail.com
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=465
+      - SMTP_SECURE=true
+      - SMTP_USER=sebasdelpm@gmail.com
+      - SMTP_PASS=rvfbornjpqfhpgnq
     networks:
       - deal-network
     depends_on:
