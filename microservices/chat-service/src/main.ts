@@ -10,13 +10,14 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
+  
+  // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3003
+  const port = parseInt(process.env.PORT, 10) || 3003;
 
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = configService.get<number>('PORT', 3003);
   await app.listen(port);
   console.log(`🚀 Chat Service está escuchando en el puerto ${port}`);
 }

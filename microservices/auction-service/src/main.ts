@@ -10,7 +10,9 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
+  
+  // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3002
+  const port = parseInt(process.env.PORT, 10) || 3002;
 
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({
@@ -22,7 +24,6 @@ async function bootstrap() {
   // Habilitar el adaptador de WebSockets
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = configService.get<number>('PORT', 3002);
   await app.listen(port);
   console.log(`🚀 Auction Service está escuchando en el puerto ${port}`);
 }

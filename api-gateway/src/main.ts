@@ -16,8 +16,8 @@ const routes = [
 
 async function bootstrap() {
   const app = await NestFactory.create<INestApplication>(AppModule);
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT', 3000);
+  // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3000
+  const port = parseInt(process.env.PORT, 10) || 3000;
 
   app.enableCors({ origin: '*' });
 
