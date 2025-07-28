@@ -6,12 +6,38 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { INestApplication } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 
+// Las rutas ahora se construyen dinámicamente
 const routes = [
-  { path: '/api/auth', target: 'http://auth-service:3001', secure: false, ws: false },
-  { path: '/api/auctions', target: 'http://auction-service:3002', secure: true, ws: false },
-  { path: '/api/chat', target: 'http://chat-service:3003', secure: true, ws: false },
-  { path: '/auction', target: 'ws://auction-service:3002', secure: false, ws: true },
-  { path: '/chat', target: 'ws://chat-service:3003', secure: false, ws: true },
+  { 
+    path: '/api/auth', 
+    target: process.env.AUTH_SERVICE_URL || 'http://auth-service:3001', 
+    secure: false, 
+    ws: false 
+  },
+  { 
+    path: '/api/auctions', 
+    target: process.env.AUCTION_SERVICE_URL || 'http://auction-service:3002', 
+    secure: true, 
+    ws: false 
+  },
+  { 
+    path: '/api/chat', 
+    target: process.env.CHAT_SERVICE_URL || 'http://chat-service:3003', 
+    secure: true, 
+    ws: false 
+  },
+  { 
+    path: '/auction', 
+    target: (process.env.AUCTION_SERVICE_URL || 'http://auction-service:3002').replace('http', 'ws'), 
+    secure: false, 
+    ws: true 
+  },
+  { 
+    path: '/chat', 
+    target: (process.env.CHAT_SERVICE_URL || 'http://chat-service:3003').replace('http', 'ws'), 
+    secure: false, 
+    ws: true 
+  },
 ];
 
 async function bootstrap() {
