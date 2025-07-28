@@ -1,6 +1,138 @@
 steps:
   # ================================================================
-  # API Gateway
+  # Auth Service (Desplegar primero)
+  # ================================================================
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA",
+        "./microservices/auth-service",
+      ]
+    id: "build-auth-service"
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA",
+      ]
+    id: "push-auth-service"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "auth-service"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA"
+      - "--region=southamerica-east1"
+      - "--platform=managed"
+      - "--no-allow-unauthenticated"
+      - "--memory=256Mi"
+      - "--cpu=1"
+    id: "deploy-auth-service"
+
+  # ================================================================
+  # Auction Service (Desplegar segundo)
+  # ================================================================
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA",
+        "./microservices/auction-service",
+      ]
+    id: "build-auction-service"
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA",
+      ]
+    id: "push-auction-service"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "auction-service"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA"
+      - "--region=southamerica-east1"
+      - "--platform=managed"
+      - "--no-allow-unauthenticated"
+      - "--memory=256Mi"
+      - "--cpu=1"
+    id: "deploy-auction-service"
+
+  # ================================================================
+  # Chat Service (Desplegar tercero)
+  # ================================================================
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA",
+        "./microservices/chat-service",
+      ]
+    id: "build-chat-service"
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA",
+      ]
+    id: "push-chat-service"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "chat-service"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA"
+      - "--region=southamerica-east1"
+      - "--platform=managed"
+      - "--no-allow-unauthenticated"
+      - "--memory=256Mi"
+      - "--cpu=1"
+    id: "deploy-chat-service"
+
+  # ================================================================
+  # Email Service (Puede desplegarse en cualquier momento)
+  # ================================================================
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA",
+        "./microservices/email-service",
+      ]
+    id: "build-email-service"
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA",
+      ]
+    id: "push-email-service"
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "email-service"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA"
+      - "--region=southamerica-east1"
+      - "--platform=managed"
+      - "--no-allow-unauthenticated"
+      - "--memory=256Mi"
+      - "--cpu=1"
+    id: "deploy-email-service"
+
+  # ================================================================
+  # API Gateway (Desplegar al final)
   # ================================================================
   - name: "gcr.io/cloud-builders/docker"
     args:
@@ -28,143 +160,12 @@ steps:
       - "--region=southamerica-east1"
       - "--platform=managed"
       - "--allow-unauthenticated"
-      # Nota: Deberás configurar las variables de entorno para las URLs de los otros servicios
-      # Ejemplo: --set-env-vars=AUTH_SERVICE_URL=https://auth-service-url.a.run.app
+      - "--set-env-vars=AUTH_SERVICE_URL=https://auth-service-qwebR99a.a.run.app,AUCTION_SERVICE_URL=https://auction-service-qwebR99a.a.run.app,CHAT_SERVICE_URL=https://chat-service-qwebR99a.a.run.app"
       - "--memory=512Mi"
       - "--cpu=1"
     id: "deploy-api-gateway"
-
-  # ================================================================
-  # Auth Service
-  # ================================================================
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "build",
-        "-t",
-        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA",
-        "./microservices/auth-service",
-      ]
-    id: "build-auth-service"
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "push",
-        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA",
-      ]
-    id: "push-auth-service"
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: gcloud
-    args:
-      - "run"
-      - "deploy"
-      - "auth-service"
-      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA"
-      - "--region=southamerica-east1"
-      - "--platform=managed"
-      - "--no-allow-unauthenticated" # Servicio interno, no accesible públicamente
-      - "--memory=256Mi"
-      - "--cpu=1"
-    id: "deploy-auth-service"
-
-  # ================================================================
-  # Auction Service
-  # ================================================================
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "build",
-        "-t",
-        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA",
-        "./microservices/auction-service",
-      ]
-    id: "build-auction-service"
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "push",
-        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA",
-      ]
-    id: "push-auction-service"
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: gcloud
-    args:
-      - "run"
-      - "deploy"
-      - "auction-service"
-      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA"
-      - "--region=southamerica-east1"
-      - "--platform=managed"
-      - "--no-allow-unauthenticated" # Servicio interno, no accesible públicamente
-      - "--memory=256Mi"
-      - "--cpu=1"
-    id: "deploy-auction-service"
-
-  # ================================================================
-  # Chat Service
-  # ================================================================
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "build",
-        "-t",
-        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA",
-        "./microservices/chat-service",
-      ]
-    id: "build-chat-service"
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "push",
-        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA",
-      ]
-    id: "push-chat-service"
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: gcloud
-    args:
-      - "run"
-      - "deploy"
-      - "chat-service"
-      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA"
-      - "--region=southamerica-east1"
-      - "--platform=managed"
-      - "--no-allow-unauthenticated" # Servicio interno, no accesible públicamente
-      - "--memory=256Mi"
-      - "--cpu=1"
-    id: "deploy-chat-service"
-
-  # ================================================================
-  # Email Service
-  # ================================================================
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "build",
-        "-t",
-        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA",
-        "./microservices/email-service",
-      ]
-    id: "build-email-service"
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "push",
-        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA",
-      ]
-    id: "push-email-service"
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: gcloud
-    args:
-      - "run"
-      - "deploy"
-      - "email-service"
-      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA"
-      - "--region=southamerica-east1"
-      - "--platform=managed"
-      - "--no-allow-unauthenticated" # Servicio interno, no accesible públicamente
-      - "--memory=256Mi"
-      - "--cpu=1"
-    id: "deploy-email-service"
+    waitFor:
+      ["deploy-auth-service", "deploy-auction-service", "deploy-chat-service"]
 
 images:
   - "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA"
