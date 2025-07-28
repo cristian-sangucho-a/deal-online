@@ -7,7 +7,7 @@ steps:
       [
         "build",
         "-t",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA",
         "./api-gateway",
       ]
     id: "build-api-gateway"
@@ -15,7 +15,7 @@ steps:
     args:
       [
         "push",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA",
       ]
     id: "push-api-gateway"
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -24,8 +24,8 @@ steps:
       - "run"
       - "deploy"
       - "api-gateway"
-      - "--image=us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA"
-      - "--region=us-west1"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA"
+      - "--region=southamerica-east1"
       - "--platform=managed"
       - "--allow-unauthenticated"
       # Nota: Deberás configurar las variables de entorno para las URLs de los otros servicios
@@ -42,7 +42,7 @@ steps:
       [
         "build",
         "-t",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA",
         "./microservices/auth-service",
       ]
     id: "build-auth-service"
@@ -50,7 +50,7 @@ steps:
     args:
       [
         "push",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA",
       ]
     id: "push-auth-service"
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -59,8 +59,8 @@ steps:
       - "run"
       - "deploy"
       - "auth-service"
-      - "--image=us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA"
-      - "--region=us-west1"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA"
+      - "--region=southamerica-east1"
       - "--platform=managed"
       - "--no-allow-unauthenticated" # Servicio interno, no accesible públicamente
       - "--memory=256Mi"
@@ -75,7 +75,7 @@ steps:
       [
         "build",
         "-t",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA",
         "./microservices/auction-service",
       ]
     id: "build-auction-service"
@@ -83,7 +83,7 @@ steps:
     args:
       [
         "push",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA",
       ]
     id: "push-auction-service"
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -92,8 +92,8 @@ steps:
       - "run"
       - "deploy"
       - "auction-service"
-      - "--image=us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA"
-      - "--region=us-west1"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA"
+      - "--region=southamerica-east1"
       - "--platform=managed"
       - "--no-allow-unauthenticated" # Servicio interno, no accesible públicamente
       - "--memory=256Mi"
@@ -108,7 +108,7 @@ steps:
       [
         "build",
         "-t",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA",
         "./microservices/chat-service",
       ]
     id: "build-chat-service"
@@ -116,7 +116,7 @@ steps:
     args:
       [
         "push",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA",
       ]
     id: "push-chat-service"
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -125,8 +125,8 @@ steps:
       - "run"
       - "deploy"
       - "chat-service"
-      - "--image=us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA"
-      - "--region=us-west1"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA"
+      - "--region=southamerica-east1"
       - "--platform=managed"
       - "--no-allow-unauthenticated" # Servicio interno, no accesible públicamente
       - "--memory=256Mi"
@@ -141,7 +141,7 @@ steps:
       [
         "build",
         "-t",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA",
         "./microservices/email-service",
       ]
     id: "build-email-service"
@@ -149,7 +149,7 @@ steps:
     args:
       [
         "push",
-        "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA",
+        "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA",
       ]
     id: "push-email-service"
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -158,8 +158,8 @@ steps:
       - "run"
       - "deploy"
       - "email-service"
-      - "--image=us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA"
-      - "--region=us-west1"
+      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA"
+      - "--region=southamerica-east1"
       - "--platform=managed"
       - "--no-allow-unauthenticated" # Servicio interno, no accesible públicamente
       - "--memory=256Mi"
@@ -167,11 +167,11 @@ steps:
     id: "deploy-email-service"
 
 images:
-  - "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA"
-  - "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA"
-  - "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA"
-  - "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA"
-  - "us-west1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA"
+  - "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA"
+  - "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auth-service:$SHORT_SHA"
+  - "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/auction-service:$SHORT_SHA"
+  - "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/chat-service:$SHORT_SHA"
+  - "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/email-service:$SHORT_SHA"
 
 options:
   machineType: E2_MEDIUM
