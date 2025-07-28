@@ -1,0 +1,361 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+---
+
+<Layout title="Crear Producto - Deal Online">
+    <Header />
+
+    <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 class="text-3xl font-bold mb-6 text-primary-700">
+            Crear Nueva Subasta
+        </h1>
+
+        <div id="error-message" class="hidden mb-4 p-4 bg-red-100 text-red-700 rounded">
+        </div>
+
+        <div id="success-message" class="hidden mb-4 p-4 bg-green-100 text-green-700 rounded">
+        </div>
+
+        <form id="product-form" class="bg-white shadow rounded-lg p-6">
+            <div class="mb-4">
+                <label for="name" class="block text-gray-700 font-semibold mb-2">
+                    Nombre del Producto
+                </label>
+                <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                />
+            </div>
+
+            <div class="mb-6">
+                <label for="endTime" class="block text-gray-700 font-semibold mb-2">
+                    Fecha de Finalización de la Subasta
+                </label>
+                <input
+                    id="endTime"
+                    name="endTime"
+                    type="datetime-local"
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                />
+            </div>
+
+            <div class="mb-4">
+                <label for="description" class="block text-gray-700 font-semibold mb-2">
+                    Descripción
+                </label>
+                <textarea
+                    id="description"
+                    name="description"
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    rows="4"
+                    placeholder="Opcional"
+                ></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label for="image" class="block text-gray-700 font-semibold mb-2">
+                    Imagen del Producto
+                </label>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
+                    <input
+                        id="image"
+                        name="image"
+                        type="file"
+                        accept="image/*"
+                        class="hidden"
+                    />
+                    <div id="image-preview" class="hidden mb-4">
+                        <img id="preview-img" src="" alt="Vista previa" class="max-w-full h-48 object-cover mx-auto rounded" />
+                        <button type="button" id="remove-image" class="mt-2 text-red-600 hover:text-red-800 text-sm">
+                            Eliminar imagen
+                        </button>
+                    </div>
+                    <div id="upload-placeholder">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <p class="text-gray-600 mb-2">
+                            <button type="button" id="upload-btn" class="text-primary-600 hover:text-primary-500 font-medium">
+                                Subir una imagen
+                            </button>
+                            o arrastra y suelta aquí
+                        </p>
+                        <p class="text-sm text-gray-500">PNG, JPG, GIF hasta 5MB</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label for="startingPrice" class="block text-gray-700 font-semibold mb-2">
+                    Precio Inicial (USD)
+                </label>
+                <input
+                    id="startingPrice"
+                    name="startingPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                />
+            </div>
+
+            <button
+                id="submit-btn"
+                type="submit"
+                class="bg-primary-600 text-white font-semibold px-6 py-3 rounded hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                Crear Producto
+            </button>
+        </form>
+    </main>
+</Layout>
+
+<script>
+    import { $token } from "../stores/authStore.js";
+    import { api } from "../services/api.js";
+    import { supabase } from "../services/supabaseClient.js";
+
+    const form = document.getElementById('product-form');
+    const errorDiv = document.getElementById('error-message');
+    const successDiv = document.getElementById('success-message');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Image handling
+    const imageInput = document.getElementById('image');
+    const uploadBtn = document.getElementById('upload-btn');
+    const imagePreview = document.getElementById('image-preview');
+    const previewImg = document.getElementById('preview-img');
+    const uploadPlaceholder = document.getElementById('upload-placeholder');
+    const removeImageBtn = document.getElementById('remove-image');
+
+    function showError(message) {
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
+        successDiv.classList.add('hidden');
+    }
+
+    function showSuccess(message) {
+        successDiv.textContent = message;
+        successDiv.classList.remove('hidden');
+        errorDiv.classList.add('hidden');
+    }
+
+    function hideMessages() {
+        errorDiv.classList.add('hidden');
+        successDiv.classList.add('hidden');
+    }
+
+    // Handle file upload button click
+    uploadBtn.addEventListener('click', () => {
+        imageInput.click();
+    });
+
+    // Handle file selection
+    imageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showError('La imagen no puede ser mayor a 5MB');
+                return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showError('Por favor selecciona un archivo de imagen válido');
+                return;
+            }
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                imagePreview.classList.remove('hidden');
+                uploadPlaceholder.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // Handle remove image
+    removeImageBtn.addEventListener('click', () => {
+        imageInput.value = '';
+        imagePreview.classList.add('hidden');
+        uploadPlaceholder.classList.remove('hidden');
+    });
+
+    // Handle drag and drop
+    const dropZone = document.querySelector('.border-dashed');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+        dropZone.classList.add('border-primary-500', 'bg-primary-50');
+    }
+
+    function unhighlight() {
+        dropZone.classList.remove('border-primary-500', 'bg-primary-50');
+    }
+
+    dropZone.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            imageInput.files = files;
+            // Trigger change event
+            const event = new Event('change', { bubbles: true });
+            imageInput.dispatchEvent(event);
+        }
+    }
+
+    // Handle form submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideMessages();
+
+        const token = $token.get();
+        if (!token) {
+            showError('Debes iniciar sesión para crear un producto.');
+            return;
+        }
+
+        const formData = new FormData(form);
+        const name = formData.get('name').trim();
+        const startingPrice = formData.get('startingPrice');
+
+        if (!name || !startingPrice) {
+            showError('Nombre y precio inicial son obligatorios.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creando producto...';
+
+        try {
+            let imageUrl = null;
+
+            // Check if user selected a file
+            const imageFile = formData.get('image');
+            if (imageFile && imageFile.size > 0) {
+                submitBtn.textContent = 'Subiendo imagen...';
+                
+                // Set the JWT token for Supabase authentication
+                await supabase.auth.setSession({
+                    access_token: token,
+                    refresh_token: null
+                });
+                
+                // Generate unique filename
+                const fileExt = imageFile.name.split('.').pop();
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+                const filePath = `products/${fileName}`;
+
+                console.log('Uploading file to Supabase Storage...', {
+                    bucket: 'deal-online',
+                    filePath,
+                    fileSize: imageFile.size,
+                    fileType: imageFile.type
+                });
+
+                // Upload file to Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('deal-online')
+                    .upload(filePath, imageFile, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                console.log('Upload result:', { uploadData, uploadError });
+
+                if (uploadError) {
+                    console.error('Supabase storage error:', uploadError);
+                    throw new Error(`Error al subir la imagen: ${uploadError.message}`);
+                }
+
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                    .from('deal-online')
+                    .getPublicUrl(filePath);
+
+                console.log('Public URL result:', urlData);
+
+                if (urlData?.publicUrl) {
+                    imageUrl = urlData.publicUrl;
+                } else {
+                    throw new Error('Error al obtener la URL pública de la imagen');
+                }
+            }
+
+            submitBtn.textContent = 'Guardando producto...';
+
+            // Create product data
+            const productData = {
+                name,
+                description: formData.get('description')?.trim() || '',
+                starting_price: parseFloat(startingPrice),
+                end_time: formData.get('endTime'),
+            };
+
+            // Add image URL if available
+            if (imageUrl) {
+                productData.image_url = imageUrl;
+            }
+
+            console.log('Sending product data:', productData);
+
+            // Create product via API
+            const response = await api.createProduct(productData, token);
+            const auction_id = response.auction.id;
+            console.log('Product created successfully:', response);
+            
+            showSuccess('Producto creado con éxito.');
+            
+            // Clear form
+            form.reset();
+            imagePreview.classList.add('hidden');
+            uploadPlaceholder.classList.remove('hidden');
+            
+            // Redirect after a short delay
+            setTimeout(() => {
+                window.location.href = `/chat/${auction_id}`;
+            }, 2000);
+
+        } catch (err) {
+            console.error('Error creating product:', err);
+            showError(err.message || 'Error al crear el producto.');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Crear Producto';
+        }
+    });
+</script>
+
+<style>
+    .border-dashed {
+        transition: all 0.3s ease;
+    }
+</style>

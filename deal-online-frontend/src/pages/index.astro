@@ -1,0 +1,331 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ProductCard from '../components/ProductCard.astro';
+import { api, ApiError } from '../services/api.js';
+
+let featuredProducts = [];
+let activeAuctions = [];
+let apiAvailable = true;
+
+try {
+  const [productsResponse, auctionsResponse] = await Promise.all([
+    api.getAllProducts(1, 8),
+    api.getActiveAuctions(1, 6)
+  ]);
+  
+  featuredProducts = productsResponse.products || [];
+  activeAuctions = auctionsResponse.auctions || [];
+} catch (error) {
+  console.error('Error loading homepage data:', error);
+  apiAvailable = false;
+  // Set empty arrays to prevent rendering issues
+  featuredProducts = [];
+  activeAuctions = [];
+  
+  // Only log connection errors, don't throw them
+  if (error instanceof ApiError && error.status === 0) {
+    console.log('API server is not available - running in demo mode');
+  }
+}
+---
+
+<Layout title="Deal Online - Plataforma de Subastas Online">
+  <Header />
+  
+  <!-- API Status Notice (only shown when API is unavailable) -->
+  {!apiAvailable && (
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-yellow-700">
+              <strong>Modo de demostración:</strong> El servidor de la API no está disponible. Algunas funciones pueden estar limitadas.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+  
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-r from-primary-600 to-accent-600 text-white py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center">
+        <h1 class="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
+          Bienvenido a Deal Online
+        </h1>
+        <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto animate-slide-up">
+          Participa en subastas emocionantes y encuentra productos extraordinarios al mejor precio
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up">
+          <a 
+            href="/auctions" 
+            class="bg-white text-primary-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+          >
+            Ver Subastas
+          </a>
+          <a 
+            href="/register" 
+            class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-primary-600 transition-colors"
+          >
+            Registrarse
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Products -->
+  {apiAvailable && featuredProducts.length > 0 && (
+    <section class="py-16 bg-gray-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+          <h2 class="text-3xl font-bold text-gray-900 mb-4">
+            Productos Destacados
+          </h2>
+          <p class="text-gray-600 max-w-2xl mx-auto">
+            Descubre una selección cuidadosa de productos únicos y de alta calidad
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+          {featuredProducts.map((product: any) => (
+            <ProductCard product={product} />
+          ))}
+        </div>
+
+        <div class="text-center">
+          <a 
+            href="/products" 
+            class="inline-flex items-center px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            Ver Todos los Productos
+            <svg class="ml-2 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Active Auctions -->
+  {apiAvailable && activeAuctions.length > 0 && (
+    <section class="py-16 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+          <h2 class="text-3xl font-bold text-gray-900 mb-4">
+            Subastas Activas
+          </h2>
+          <p class="text-gray-600 max-w-2xl mx-auto">
+            No te pierdas estas oportunidades únicas que terminan pronto
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+          {activeAuctions.map((auction: any) => (
+            <ProductCard product={auction.Product} />
+          ))}
+        </div>
+
+        <div class="text-center">
+          <a 
+            href="/auctions" 
+            class="inline-flex items-center px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors"
+          >
+            Ver Todas las Subastas
+            <svg class="ml-2 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Placeholder sections when API is unavailable -->
+  {!apiAvailable && (
+    <>
+      <!-- Demo Products Section -->
+      <section class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">
+              Productos Destacados
+            </h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+              Descubre una selección cuidadosa de productos únicos y de alta calidad
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Demo product cards -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+              <div class="h-48 bg-gray-200 flex items-center justify-center">
+                <span class="text-gray-500">Imagen del producto</span>
+              </div>
+              <div class="p-4">
+                <h3 class="font-semibold text-gray-900 mb-2">Producto de Ejemplo</h3>
+                <p class="text-gray-600 text-sm mb-2">Descripción del producto...</p>
+                <div class="text-lg font-bold text-primary-600">$299.99</div>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+              <div class="h-48 bg-gray-200 flex items-center justify-center">
+                <span class="text-gray-500">Imagen del producto</span>
+              </div>
+              <div class="p-4">
+                <h3 class="font-semibold text-gray-900 mb-2">Artículo Único</h3>
+                <p class="text-gray-600 text-sm mb-2">Descripción del artículo...</p>
+                <div class="text-lg font-bold text-primary-600">$149.99</div>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+              <div class="h-48 bg-gray-200 flex items-center justify-center">
+                <span class="text-gray-500">Imagen del producto</span>
+              </div>
+              <div class="p-4">
+                <h3 class="font-semibold text-gray-900 mb-2">Tesoro Especial</h3>
+                <p class="text-gray-600 text-sm mb-2">Descripción del tesoro...</p>
+                <div class="text-lg font-bold text-primary-600">$599.99</div>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+              <div class="h-48 bg-gray-200 flex items-center justify-center">
+                <span class="text-gray-500">Imagen del producto</span>
+              </div>
+              <div class="p-4">
+                <h3 class="font-semibold text-gray-900 mb-2">Coleccionable</h3>
+                <p class="text-gray-600 text-sm mb-2">Descripción del coleccionable...</p>
+                <div class="text-lg font-bold text-primary-600">$399.99</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center">
+            <a 
+              href="/products" 
+              class="inline-flex items-center px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            >
+              Ver Todos los Productos
+              <svg class="ml-2 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Demo Auctions Section -->
+      <section class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">
+              Subastas Activas
+            </h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+              No te pierdas estas oportunidades únicas que terminan pronto
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+            <!-- Demo auction cards -->
+            <div class="bg-white rounded-lg shadow-md overflow-hidden border-2 border-accent-200">
+              <div class="h-48 bg-gray-200 flex items-center justify-center">
+                <span class="text-gray-500">Imagen de subasta</span>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="bg-accent-100 text-accent-800 text-xs px-2 py-1 rounded">SUBASTA</span>
+                  <span class="text-sm text-gray-500">Termina en 2h 30m</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-2">Subasta de Ejemplo</h3>
+                <p class="text-gray-600 text-sm mb-2">Descripción de la subasta...</p>
+                <div class="flex justify-between items-center">
+                  <div>
+                    <div class="text-sm text-gray-500">Oferta actual</div>
+                    <div class="text-lg font-bold text-accent-600">$450.00</div>
+                  </div>
+                  <button class="bg-accent-500 text-white px-4 py-2 rounded hover:bg-accent-600 transition-colors">
+                    Ofertar
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md overflow-hidden border-2 border-accent-200">
+              <div class="h-48 bg-gray-200 flex items-center justify-center">
+                <span class="text-gray-500">Imagen de subasta</span>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="bg-accent-100 text-accent-800 text-xs px-2 py-1 rounded">SUBASTA</span>
+                  <span class="text-sm text-gray-500">Termina en 1h 15m</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-2">Oportunidad Única</h3>
+                <p class="text-gray-600 text-sm mb-2">Descripción de la oportunidad...</p>
+                <div class="flex justify-between items-center">
+                  <div>
+                    <div class="text-sm text-gray-500">Oferta actual</div>
+                    <div class="text-lg font-bold text-accent-600">$275.00</div>
+                  </div>
+                  <button class="bg-accent-500 text-white px-4 py-2 rounded hover:bg-accent-600 transition-colors">
+                    Ofertar
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md overflow-hidden border-2 border-accent-200">
+              <div class="h-48 bg-gray-200 flex items-center justify-center">
+                <span class="text-gray-500">Imagen de subasta</span>
+              </div>
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="bg-accent-100 text-accent-800 text-xs px-2 py-1 rounded">SUBASTA</span>
+                  <span class="text-sm text-gray-500">Termina en 45m</span>
+                </div>
+                <h3 class="font-semibold text-gray-900 mb-2">Último Momento</h3>
+                <p class="text-gray-600 text-sm mb-2">Descripción del último momento...</p>
+                <div class="flex justify-between items-center">
+                  <div>
+                    <div class="text-sm text-gray-500">Oferta actual</div>
+                    <div class="text-lg font-bold text-accent-600">$825.00</div>
+                  </div>
+                  <button class="bg-accent-500 text-white px-4 py-2 rounded hover:bg-accent-600 transition-colors">
+                    Ofertar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center">
+            <a 
+              href="/auctions" 
+              class="inline-flex items-center px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors"
+            >
+              Ver Todas las Subastas
+              <svg class="ml-2 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </section>
+    </>
+  )}
+
+
+  <Footer />
+</Layout>

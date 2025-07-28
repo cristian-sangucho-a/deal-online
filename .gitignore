@@ -1,3 +1,5 @@
+/backend/node_modules
+/backend/.env
 # Created by https://www.toptal.com/developers/gitignore/api/node,react,nextjs
 # Edit at https://www.toptal.com/developers/gitignore?templates=node,react,nextjs
 

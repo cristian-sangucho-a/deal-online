@@ -1,0 +1,404 @@
+---
+export interface Props {
+    auctionId: number;
+    currentPrice: number;
+    auctionStatus: string;
+}
+
+const { auctionId, currentPrice, auctionStatus } = Astro.props;
+---
+
+<div class="bg-white rounded-lg shadow-sm border h-96 flex flex-col">
+    <!-- Chat Header -->
+    <div class="p-4 border-b bg-gray-50 rounded-t-lg">
+        <h3 class="font-semibold text-gray-900 flex items-center">
+            <svg
+                class="w-5 h-5 mr-2 text-primary-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+            >
+                <path
+                    fill-rule="evenodd"
+                    d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+                    clip-rule="evenodd"></path>
+            </svg>
+            Chat de la Subasta
+        </h3>
+        <p class="text-sm text-gray-600">
+            Precio actual: ${currentPrice.toLocaleString()}
+        </p>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3">
+        <div class="flex items-center justify-center py-8">
+            <div
+                class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"
+            >
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Input -->
+    <div class="p-4 border-t bg-gray-50">
+        <div id="auth-required" class="hidden text-center py-2">
+            <p class="text-gray-600 text-sm mb-2">
+                Inicia sesión para participar en el chat
+            </p>
+            <a
+                href="/login"
+                class="text-primary-600 hover:text-primary-500 text-sm font-medium"
+            >
+                Iniciar Sesión
+            </a>
+        </div>
+
+        <div id="chat-form-container" class="hidden">
+            <!-- Quick Bid Buttons -->
+            {
+                auctionStatus === "active" && (
+                    <div class="mb-3 flex gap-2 flex-wrap">
+                        <button
+                            class="quick-bid-btn bg-accent-100 text-accent-700 px-3 py-1 rounded-full text-sm hover:bg-accent-200 transition-colors"
+                            data-amount={currentPrice + 10}
+                        >
+                            +$10
+                        </button>
+                        <button
+                            class="quick-bid-btn bg-accent-100 text-accent-700 px-3 py-1 rounded-full text-sm hover:bg-accent-200 transition-colors"
+                            data-amount={currentPrice + 25}
+                        >
+                            +$25
+                        </button>
+                        <button
+                            class="quick-bid-btn bg-accent-100 text-accent-700 px-3 py-1 rounded-full text-sm hover:bg-accent-200 transition-colors"
+                            data-amount={currentPrice + 50}
+                        >
+                            +$50
+                        </button>
+                        <button
+                            class="quick-bid-btn bg-accent-100 text-accent-700 px-3 py-1 rounded-full text-sm hover:bg-accent-200 transition-colors"
+                            data-amount={currentPrice + 100}
+                        >
+                            +$100
+                        </button>
+                    </div>
+                )
+            }
+
+            <!-- Message Form -->
+            <form id="chat-form" class="space-y-2">
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        id="message-input"
+                        placeholder="Escribe un mensaje o haz una oferta..."
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm"
+                        maxlength="500"
+                    />
+                    <button
+                        type="submit"
+                        class="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium"
+                    >
+                        Enviar
+                    </button>
+                </div>
+
+                <!-- Bid Mode Toggle -->
+                {
+                    auctionStatus === "active" && (
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="bid-mode"
+                                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                />
+                                <span class="ml-2 text-sm text-gray-700">
+                                    Enviar como oferta
+                                </span>
+                            </label>
+
+                            <div id="bid-amount-container" class="hidden">
+                                <input
+                                    type="number"
+                                    id="bid-amount"
+                                    placeholder="Monto"
+                                    min={currentPrice + 1}
+                                    step="0.01"
+                                    class="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-primary-500 focus:border-primary-500"
+                                />
+                            </div>
+                        </div>
+                    )
+                }
+            </form>
+        </div>
+
+        <div id="auction-closed" class="hidden text-center py-2">
+            <p class="text-gray-500 text-sm">La subasta ha finalizado</p>
+        </div>
+    </div>
+</div>
+
+<script define:vars={{ auctionId, currentPrice, auctionStatus }}>
+    import { $user, $token } from "../stores/authStore.js";
+    import { api } from "../services/api.js";
+
+    let messages = [];
+    let isPolling = false;
+
+    // DOM elements
+    const messagesContainer = document.getElementById("chat-messages");
+    const authRequired = document.getElementById("auth-required");
+    const chatFormContainer = document.getElementById("chat-form-container");
+    const auctionClosed = document.getElementById("auction-closed");
+    const chatForm = document.getElementById("chat-form");
+    const messageInput = document.getElementById("message-input");
+    const bidMode = document.getElementById("bid-mode");
+    const bidAmountContainer = document.getElementById("bid-amount-container");
+    const bidAmountInput = document.getElementById("bid-amount");
+    const quickBidButtons = document.querySelectorAll(".quick-bid-btn");
+
+    // Check authentication and auction status
+    function updateUI() {
+        const token = $token.get();
+        const user = $user.get();
+
+        if (auctionStatus !== "active") {
+            authRequired.classList.add("hidden");
+            chatFormContainer.classList.add("hidden");
+            auctionClosed.classList.remove("hidden");
+        } else if (token && user) {
+            authRequired.classList.add("hidden");
+            chatFormContainer.classList.remove("hidden");
+            auctionClosed.classList.add("hidden");
+        } else {
+            authRequired.classList.remove("hidden");
+            chatFormContainer.classList.add("hidden");
+            auctionClosed.classList.add("hidden");
+        }
+    }
+
+    // Render messages
+    function renderMessages() {
+        if (messages.length === 0) {
+            messagesContainer.innerHTML = `
+        <div class="text-center py-8">
+          <div class="text-gray-400 mb-2">
+            <svg class="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <p class="text-gray-500 text-sm">No hay mensajes aún</p>
+          <p class="text-gray-400 text-xs mt-1">Sé el primero en comentar</p>
+        </div>
+      `;
+            return;
+        }
+
+        messagesContainer.innerHTML = messages
+            .map((message) => {
+                const isCurrentUser = $user.get()?.id === message.user_id;
+                const messageTime = new Date(
+                    message.created_at,
+                ).toLocaleTimeString();
+
+                if (message.is_bid) {
+                    return `
+          <div class="flex ${isCurrentUser ? "justify-end" : "justify-start"}">
+            <div class="max-w-xs lg:max-w-md">
+              <div class="bg-gradient-to-r from-accent-500 to-accent-600 text-white rounded-lg px-4 py-2 shadow-sm">
+                <div class="flex items-center space-x-2 mb-1">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 17v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/>
+                  </svg>
+                  <span class="font-semibold text-sm">OFERTA</span>
+                </div>
+                <p class="font-bold text-lg">$${message.bid_amount.toLocaleString()}</p>
+                ${message.message ? `<p class="text-sm opacity-90 mt-1">"${message.message}"</p>` : ""}
+                <div class="flex justify-between items-center mt-2 text-xs opacity-75">
+                  <span>${message.sender?.nombre || "Usuario"}</span>
+                  <span>${messageTime}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+                } else {
+                    return `
+          <div class="flex ${isCurrentUser ? "justify-end" : "justify-start"}">
+            <div class="max-w-xs lg:max-w-md">
+              <div class="${
+                  isCurrentUser
+                      ? "bg-primary-500 text-white"
+                      : "bg-gray-100 text-gray-900"
+              } rounded-lg px-3 py-2">
+                <p class="text-sm">${message.message}</p>
+                <div class="flex justify-between items-center mt-1 text-xs ${isCurrentUser ? "text-primary-100" : "text-gray-500"}">
+                  <span>${message.sender?.nombre || "Usuario"}</span>
+                  <span>${messageTime}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+                }
+            })
+            .join("");
+
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Load messages
+    async function loadMessages() {
+        try {
+            const token = $token.get();
+            if (!token) return;
+
+            const response = await api.getChatMessages(auctionId, token);
+            messages = response || [];
+            renderMessages();
+        } catch (error) {
+            console.error("Error loading messages:", error);
+            messagesContainer.innerHTML = `
+        <div class="text-center py-8">
+          <p class="text-error-500 text-sm">Error al cargar mensajes</p>
+          <button onclick="loadMessages()" class="text-primary-600 hover:text-primary-500 text-xs mt-1">
+            Reintentar
+          </button>
+        </div>
+      `;
+        }
+    }
+
+    // Send message
+    async function sendMessage(message, isBid = false, bidAmount = null) {
+        try {
+            const token = $token.get();
+            if (!token) return;
+
+            await api.sendChatMessage(
+                auctionId,
+                message,
+                isBid,
+                bidAmount,
+                token,
+            );
+
+            // Reload messages to show the new one
+            await loadMessages();
+
+            // Clear form
+            messageInput.value = "";
+            bidAmountInput.value = "";
+            bidMode.checked = false;
+            bidAmountContainer.classList.add("hidden");
+
+            // If it was a bid, reload the page to update auction info
+            if (isBid) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        } catch (error) {
+            alert(error.message || "Error al enviar mensaje");
+        }
+    }
+
+    // Event listeners
+    bidMode?.addEventListener("change", (e) => {
+        if (e.target.checked) {
+            bidAmountContainer.classList.remove("hidden");
+            bidAmountInput.required = true;
+            bidAmountInput.focus();
+        } else {
+            bidAmountContainer.classList.add("hidden");
+            bidAmountInput.required = false;
+        }
+    });
+
+    chatForm?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const message = messageInput.value.trim();
+        const isBid = bidMode?.checked || false;
+        const bidAmount = isBid ? parseFloat(bidAmountInput.value) : null;
+
+        if (!message && !isBid) return;
+
+        if (isBid && (!bidAmount || bidAmount <= currentPrice)) {
+            alert(`La oferta debe ser mayor a $${currentPrice}`);
+            return;
+        }
+
+        await sendMessage(message, isBid, bidAmount);
+    });
+
+    // Quick bid buttons
+    quickBidButtons.forEach((button) => {
+        button.addEventListener("click", async () => {
+            const amount = parseFloat(button.dataset.amount);
+            await sendMessage(
+                `Oferta rápida de $${amount.toLocaleString()}`,
+                true,
+                amount,
+            );
+        });
+    });
+
+    // Polling for new messages
+    function startPolling() {
+        if (isPolling) return;
+        isPolling = true;
+
+        setInterval(async () => {
+            const token = $token.get();
+            if (token && auctionStatus === "active") {
+                await loadMessages();
+            }
+        }, 5000); // Poll every 5 seconds
+    }
+
+    // Initialize
+    updateUI();
+    loadMessages();
+    startPolling();
+
+    // Listen for auth changes
+    $token.subscribe(() => {
+        updateUI();
+        loadMessages();
+    });
+    $user.subscribe(() => {
+        updateUI();
+    });
+
+    // Make loadMessages available globally for retry button
+    window.loadMessages = loadMessages;
+</script>
+
+<style>
+    #chat-messages {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e0 #f7fafc;
+    }
+
+    #chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #chat-messages::-webkit-scrollbar-track {
+        background: #f7fafc;
+    }
+
+    #chat-messages::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 3px;
+    }
+
+    #chat-messages::-webkit-scrollbar-thumb:hover {
+        background: #a0aec0;
+    }
+</style>

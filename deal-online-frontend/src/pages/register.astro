@@ -1,0 +1,464 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+// No importar api.js aquí para evitar errores de SSR
+---
+
+<Layout title="Registrarse - Deal Online">
+  <Header />
+  
+  <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-gray-900">Crear Cuenta</h2>
+        <p class="mt-2 text-gray-600">¿Ya tienes cuenta? 
+          <a href="/login" class="text-primary-600 hover:text-primary-500 font-medium">Inicia sesión aquí</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
+        <form id="register-form" class="space-y-6">
+          <div id="error-message" class="hidden p-4 bg-error-50 border border-error-200 rounded-lg">
+            <div class="flex">
+              <svg class="w-5 h-5 text-error-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+              </svg>
+              <div class="ml-3">
+                <p class="text-error-800 text-sm" id="error-text"></p>
+              </div>
+            </div>
+          </div>
+
+          <div id="success-message" class="hidden p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div class="flex">
+              <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <div class="ml-3">
+                <p class="text-green-800 text-sm" id="success-text"></p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="nombre" class="block text-sm font-medium text-gray-700">
+              Nombre Completo
+            </label>
+            <div class="mt-1">
+              <input 
+                id="nombre" 
+                name="nombre" 
+                type="text" 
+                autocomplete="name" 
+                required 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                placeholder="Juan Pérez"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">
+              Correo Electrónico
+            </label>
+            <div class="mt-1">
+              <input 
+                id="email" 
+                name="email" 
+                type="email" 
+                autocomplete="email" 
+                required 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                placeholder="tu@email.com"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="celular" class="block text-sm font-medium text-gray-700">
+              Teléfono Celular
+            </label>
+            <div class="mt-1">
+              <input 
+                id="celular" 
+                name="celular" 
+                type="tel" 
+                autocomplete="tel" 
+                required 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                placeholder="+1234567890"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700">
+              Contraseña
+            </label>
+            <div class="mt-1 relative">
+              <input 
+                id="password" 
+                name="password" 
+                type="password" 
+                autocomplete="new-password" 
+                required 
+                minlength="6"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 pr-10"
+                placeholder="••••••••"
+              />
+              <button 
+                type="button" 
+                id="toggle-password" 
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <svg id="eye-open" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <svg id="eye-closed" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mt-2">
+              <div class="flex items-center space-x-2">
+                <div id="strength-bar" class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div id="strength-fill" class="h-full transition-all duration-300 ease-out"></div>
+                </div>
+                <span id="strength-text" class="text-xs text-gray-500">Mínimo 6 caracteres</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="confirmPassword" class="block text-sm font-medium text-gray-700">
+              Confirmar Contraseña
+            </label>
+            <div class="mt-1 relative">
+              <input 
+                id="confirmPassword" 
+                name="confirmPassword" 
+                type="password" 
+                autocomplete="new-password" 
+                required 
+                minlength="6"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                placeholder="••••••••"
+              />
+              <div id="password-match-indicator" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden">
+                <svg id="match-check" class="w-5 h-5 text-green-500 hidden" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <svg id="match-x" class="w-5 h-5 text-red-500 hidden" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center">
+            <input 
+              id="terms" 
+              name="terms" 
+              type="checkbox" 
+              required
+              class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            />
+            <label for="terms" class="ml-2 block text-sm text-gray-900">
+              Acepto los 
+              <a href="/terms" class="text-primary-600 hover:text-primary-500">términos y condiciones</a>
+              y la 
+              <a href="/privacy" class="text-primary-600 hover:text-primary-500">política de privacidad</a>
+            </label>
+          </div>
+
+          <div>
+            <button 
+              type="submit" 
+              id="submit-btn"
+              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              <span id="submit-text">Crear Cuenta</span>
+              <svg id="loading-spinner" class="hidden animate-spin ml-2 w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <Footer />
+</Layout>
+
+<script>
+  // Solo ejecutar en el cliente
+  if (typeof window !== 'undefined') {
+    // Import dinámico del API para evitar errores de SSR
+    import('../services/api.js').then(({ api }) => {
+      const form = document.getElementById('register-form');
+      const submitBtn = document.getElementById('submit-btn');
+      const submitText = document.getElementById('submit-text');
+      const loadingSpinner = document.getElementById('loading-spinner');
+      const errorMessage = document.getElementById('error-message');
+      const errorText = document.getElementById('error-text');
+      const successMessage = document.getElementById('success-message');
+      const successText = document.getElementById('success-text');
+      const password = document.getElementById('password');
+      const confirmPassword = document.getElementById('confirmPassword');
+      const togglePassword = document.getElementById('toggle-password');
+      const eyeOpen = document.getElementById('eye-open');
+      const eyeClosed = document.getElementById('eye-closed');
+      const strengthBar = document.getElementById('strength-fill');
+      const strengthText = document.getElementById('strength-text');
+      const passwordMatchIndicator = document.getElementById('password-match-indicator');
+      const matchCheck = document.getElementById('match-check');
+      const matchX = document.getElementById('match-x');
+
+      function showError(message) {
+        errorText.textContent = message;
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+        // Scroll to error message
+        errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      function showSuccess(message) {
+        successText.textContent = message;
+        successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+        // Scroll to success message
+        successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      function hideMessages() {
+        errorMessage.classList.add('hidden');
+        successMessage.classList.add('hidden');
+      }
+
+      function setLoading(loading) {
+        submitBtn.disabled = loading;
+        if (loading) {
+          submitText.textContent = 'Creando cuenta...';
+          loadingSpinner.classList.remove('hidden');
+        } else {
+          submitText.textContent = 'Crear Cuenta';
+          loadingSpinner.classList.add('hidden');
+        }
+      }
+
+      // Password strength checker
+      function checkPasswordStrength(password) {
+        let strength = 0;
+        let feedback = '';
+
+        if (password.length >= 6) strength += 1;
+        if (password.length >= 8) strength += 1;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 1;
+        if (/\d/.test(password)) strength += 1;
+        if (/[^a-zA-Z\d]/.test(password)) strength += 1;
+
+        switch (strength) {
+          case 0:
+          case 1:
+            strengthBar.style.width = '20%';
+            strengthBar.className = 'h-full transition-all duration-300 ease-out bg-red-500';
+            feedback = 'Muy débil';
+            break;
+          case 2:
+            strengthBar.style.width = '40%';
+            strengthBar.className = 'h-full transition-all duration-300 ease-out bg-orange-500';
+            feedback = 'Débil';
+            break;
+          case 3:
+            strengthBar.style.width = '60%';
+            strengthBar.className = 'h-full transition-all duration-300 ease-out bg-yellow-500';
+            feedback = 'Regular';
+            break;
+          case 4:
+            strengthBar.style.width = '80%';
+            strengthBar.className = 'h-full transition-all duration-300 ease-out bg-blue-500';
+            feedback = 'Buena';
+            break;
+          case 5:
+            strengthBar.style.width = '100%';
+            strengthBar.className = 'h-full transition-all duration-300 ease-out bg-green-500';
+            feedback = 'Excelente';
+            break;
+        }
+
+        strengthText.textContent = feedback;
+        return strength;
+      }
+
+      // Password visibility toggle
+      togglePassword?.addEventListener('click', () => {
+        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+        password.setAttribute('type', type);
+        
+        if (type === 'text') {
+          eyeOpen.classList.add('hidden');
+          eyeClosed.classList.remove('hidden');
+        } else {
+          eyeOpen.classList.remove('hidden');
+          eyeClosed.classList.add('hidden');
+        }
+      });
+
+      // Password strength validation
+      password?.addEventListener('input', (e) => {
+        checkPasswordStrength(e.target.value);
+        validatePasswords();
+      });
+
+      // Password confirmation validation
+      function validatePasswords() {
+        const pwd = password.value;
+        const confirmPwd = confirmPassword.value;
+        
+        if (confirmPwd.length > 0) {
+          passwordMatchIndicator.classList.remove('hidden');
+          
+          if (pwd === confirmPwd) {
+            confirmPassword.setCustomValidity('');
+            matchCheck.classList.remove('hidden');
+            matchX.classList.add('hidden');
+            confirmPassword.classList.remove('border-red-300');
+            confirmPassword.classList.add('border-green-300');
+          } else {
+            confirmPassword.setCustomValidity('Las contraseñas no coinciden');
+            matchCheck.classList.add('hidden');
+            matchX.classList.remove('hidden');
+            confirmPassword.classList.remove('border-green-300');
+            confirmPassword.classList.add('border-red-300');
+          }
+        } else {
+          passwordMatchIndicator.classList.add('hidden');
+          confirmPassword.setCustomValidity('');
+          confirmPassword.classList.remove('border-red-300', 'border-green-300');
+        }
+      }
+
+      confirmPassword?.addEventListener('input', validatePasswords);
+
+      // Form validation
+      function validateForm() {
+        const formData = new FormData(form);
+        const nombre = formData.get('nombre').trim();
+        const email = formData.get('email').trim();
+        const celular = formData.get('celular').trim();
+        const pwd = formData.get('password');
+        const confirmPwd = formData.get('confirmPassword');
+        const terms = formData.get('terms');
+
+        if (!nombre) {
+          showError('El nombre es requerido');
+          return false;
+        }
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showError('Ingresa un email válido');
+          return false;
+        }
+
+        if (!celular) {
+          showError('El teléfono es requerido');
+          return false;
+        }
+
+        if (!pwd || pwd.length < 6) {
+          showError('La contraseña debe tener al menos 6 caracteres');
+          return false;
+        }
+
+        if (pwd !== confirmPwd) {
+          showError('Las contraseñas no coinciden');
+          return false;
+        }
+
+        if (!terms) {
+          showError('Debes aceptar los términos y condiciones');
+          return false;
+        }
+
+        return true;
+      }
+
+      // Form submission
+      form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!validateForm()) {
+          return;
+        }
+
+        hideMessages();
+        setLoading(true);
+
+        const formData = new FormData(e.target);
+        const userData = {
+          nombre: formData.get('nombre').trim(),
+          email: formData.get('email').trim(),
+          celular: formData.get('celular').trim(),
+          password: formData.get('password')
+        };
+
+        try {
+          const response = await api.register(userData);
+          showSuccess(response.message || 'Cuenta creada exitosamente. Revisa tu email para verificar tu cuenta.');
+          
+          // Limpiar formulario
+          form.reset();
+          strengthBar.style.width = '0%';
+          strengthText.textContent = 'Mínimo 6 caracteres';
+          passwordMatchIndicator.classList.add('hidden');
+          
+          // Redireccionar a verify.astro después de 2 segundos
+          setTimeout(() => {
+            window.location.href = `/verify?email=${encodeURIComponent(userData.email)}`;
+          }, 2000);
+          
+        } catch (error) {
+          console.error('Registration error:', error);
+          showError(error.message || 'Error al crear la cuenta. Inténtalo de nuevo.');
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      // Real-time validation feedback
+      const inputs = form.querySelectorAll('input[required]');
+      inputs.forEach(input => {
+        input.addEventListener('blur', () => {
+          if (input.validity.valid) {
+            input.classList.remove('border-red-300');
+            input.classList.add('border-green-300');
+          } else {
+            input.classList.remove('border-green-300');
+            input.classList.add('border-red-300');
+          }
+        });
+
+        input.addEventListener('input', () => {
+          if (input.classList.contains('border-red-300') && input.validity.valid) {
+            input.classList.remove('border-red-300');
+            input.classList.add('border-green-300');
+          }
+        });
+      });
+
+    }).catch(error => {
+      console.error('Error loading API:', error);
+      const errorMessage = document.getElementById('error-message');
+      const errorText = document.getElementById('error-text');
+      if (errorMessage && errorText) {
+        errorText.textContent = 'Error al cargar la aplicación. Recarga la página.';
+        errorMessage.classList.remove('hidden');
+      }
+    });
+  }
+</script>

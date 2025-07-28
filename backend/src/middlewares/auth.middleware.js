@@ -46,8 +46,7 @@ const verifyToken = async (req, res, next) => {
             const newToken = generateToken(
                 session.User.id,
                 session.User.email,
-                session.User.nombre,
-                session.User.role
+                session.User.nombre
             );
             const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -63,7 +62,6 @@ const verifyToken = async (req, res, next) => {
             user_id: userId,
             email: decoded.email,
             name: decoded.name,
-            role: decoded.role,
         };
         console.log("Assigned req.user:", req.user);
         next();

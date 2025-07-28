@@ -25,14 +25,6 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    role: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'client', // Por defecto, los nuevos usuarios son clientes
-        validate: {
-            isIn: [['admin', 'client']] // Solo permite estos valores
-        }
-    },
     verification_code: {
         type: DataTypes.STRING(6),
         allowNull: true,

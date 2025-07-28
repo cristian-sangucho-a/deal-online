@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s # Con qué frecuencia recolectar datos
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'microservices'
+    static_configs:
+      - targets:
+          - 'api-gateway:3000'
+          - 'auth-service:3001'
+          - 'auction-service:3002'
+          - 'chat-service:3003'

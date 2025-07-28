@@ -1,0 +1,365 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Verificar Cuenta - Deal Online">
+  <Header />
+  
+  <div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="text-center">
+        <div class="mx-auto w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
+          <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <h2 class="mt-6 text-3xl font-bold text-gray-900">Verifica tu cuenta</h2>
+        <p class="mt-2 text-gray-600">
+          Hemos enviado un código de verificación a tu correo electrónico
+        </p>
+        <p id="email-display" class="mt-1 text-sm font-medium text-primary-600"></p>
+      </div>
+    </div>
+
+    <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div class="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
+        
+        <!-- Formulario de verificación -->
+        <form id="verify-form" class="space-y-6">
+          <div id="error-message" class="hidden p-4 bg-error-50 border border-error-200 rounded-lg">
+            <div class="flex">
+              <svg class="w-5 h-5 text-error-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+              </svg>
+              <div class="ml-3">
+                <p class="text-error-800 text-sm" id="error-text"></p>
+              </div>
+            </div>
+          </div>
+
+          <div id="success-message" class="hidden p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div class="flex">
+              <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <div class="ml-3">
+                <p class="text-green-800 text-sm" id="success-text"></p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="verification-code" class="block text-sm font-medium text-gray-700">
+              Código de Verificación
+            </label>
+            <div class="mt-1">
+              <input 
+                id="verification-code" 
+                name="verificationCode" 
+                type="text" 
+                maxlength="6"
+                autocomplete="one-time-code"
+                required 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-center text-2xl font-mono tracking-widest"
+                placeholder="000000"
+              />
+            </div>
+            <p class="mt-2 text-sm text-gray-500">
+              Ingresa el código de 6 dígitos que enviamos a tu correo
+            </p>
+          </div>
+
+          <div>
+            <button 
+              type="submit" 
+              id="verify-btn"
+              class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              <span id="verify-text">Verificar Cuenta</span>
+              <svg id="verify-spinner" class="hidden animate-spin ml-2 w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <!-- Sección para reenviar código -->
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-600">
+            ¿No recibiste el código?
+          </p>
+          <button 
+            id="resend-btn"
+            class="mt-2 text-sm text-primary-600 hover:text-primary-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span id="resend-text">Reenviar código</span>
+            <span id="resend-timer" class="hidden">Reenviar en <span id="timer-count">60</span>s</span>
+          </button>
+        </div>
+
+        <!-- Enlaces adicionales -->
+        <div class="mt-6 text-center space-y-2">
+          <a href="/login" class="block text-sm text-gray-600 hover:text-gray-500">
+            ¿Ya tienes tu cuenta verificada? Inicia sesión
+          </a>
+          <a href="/register" class="block text-sm text-gray-600 hover:text-gray-500">
+            ¿Usaste un email incorrecto? Regístrate de nuevo
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <Footer />
+</Layout>
+
+<script>
+  // Solo ejecutar en el cliente
+  if (typeof window !== 'undefined') {
+    // Import dinámico del API para evitar errores de SSR
+    import('../services/api.js').then(({ api }) => {
+      const form = document.getElementById('verify-form');
+      const verifyBtn = document.getElementById('verify-btn');
+      const verifyText = document.getElementById('verify-text');
+      const verifySpinner = document.getElementById('verify-spinner');
+      const errorMessage = document.getElementById('error-message');
+      const errorText = document.getElementById('error-text');
+      const successMessage = document.getElementById('success-message');
+      const successText = document.getElementById('success-text');
+      const verificationCodeInput = document.getElementById('verification-code');
+      const emailDisplay = document.getElementById('email-display');
+      const resendBtn = document.getElementById('resend-btn');
+      const resendText = document.getElementById('resend-text');
+      const resendTimer = document.getElementById('resend-timer');
+      const timerCount = document.getElementById('timer-count');
+
+      let userEmail = '';
+      let resendCooldown = false;
+      let timerInterval = null;
+
+      // Obtener email de URL params
+      function getEmailFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const email = urlParams.get('email');
+        if (email) {
+          userEmail = decodeURIComponent(email);
+          emailDisplay.textContent = userEmail;
+        } else {
+          // Si no hay email en la URL, redirigir al registro
+          showError('No se encontró información de registro. Serás redirigido al formulario de registro.');
+          setTimeout(() => {
+            window.location.href = '/register';
+          }, 3000);
+        }
+      }
+
+      function showError(message) {
+        errorText.textContent = message;
+        errorMessage.classList.remove('hidden');
+        successMessage.classList.add('hidden');
+        errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      function showSuccess(message) {
+        successText.textContent = message;
+        successMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+        successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      function hideMessages() {
+        errorMessage.classList.add('hidden');
+        successMessage.classList.add('hidden');
+      }
+
+      function setLoading(loading) {
+        verifyBtn.disabled = loading;
+        if (loading) {
+          verifyText.textContent = 'Verificando...';
+          verifySpinner.classList.remove('hidden');
+        } else {
+          verifyText.textContent = 'Verificar Cuenta';
+          verifySpinner.classList.add('hidden');
+        }
+      }
+
+      function setResendLoading(loading) {
+        resendBtn.disabled = loading;
+        if (loading) {
+          resendText.textContent = 'Reenviando...';
+        } else {
+          resendText.textContent = 'Reenviar código';
+        }
+      }
+
+      function startResendTimer() {
+        resendCooldown = true;
+        resendBtn.disabled = true;
+        resendText.classList.add('hidden');
+        resendTimer.classList.remove('hidden');
+        
+        let seconds = 60;
+        timerCount.textContent = seconds;
+        
+        timerInterval = setInterval(() => {
+          seconds--;
+          timerCount.textContent = seconds;
+          
+          if (seconds <= 0) {
+            clearInterval(timerInterval);
+            resendCooldown = false;
+            resendBtn.disabled = false;
+            resendText.classList.remove('hidden');
+            resendTimer.classList.add('hidden');
+          }
+        }, 1000);
+      }
+
+      // Formatear input del código (solo números, máximo 6 dígitos)
+      verificationCodeInput?.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\D/g, ''); // Solo números
+        if (value.length > 6) {
+          value = value.slice(0, 6);
+        }
+        e.target.value = value;
+        
+        // Auto-submit cuando se completen 6 dígitos
+        if (value.length === 6) {
+          setTimeout(() => {
+            form.dispatchEvent(new Event('submit'));
+          }, 500);
+        }
+      });
+
+      // Manejar pegado de código
+      verificationCodeInput?.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        const code = paste.replace(/\D/g, '').slice(0, 6);
+        verificationCodeInput.value = code;
+        
+        if (code.length === 6) {
+          setTimeout(() => {
+            form.dispatchEvent(new Event('submit'));
+          }, 500);
+        }
+      });
+
+      // Envío del formulario de verificación
+      form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!userEmail) {
+          showError('No se encontró información del email. Regístrate de nuevo.');
+          return;
+        }
+
+        const formData = new FormData(e.target);
+        const verificationCode = formData.get('verificationCode');
+
+        if (!verificationCode || verificationCode.length !== 6) {
+          showError('Ingresa un código de verificación válido de 6 dígitos');
+          return;
+        }
+
+        hideMessages();
+        setLoading(true);
+
+        try {
+          // Usando el método correcto de tu API
+          const response = await api.verifyRegistration(userEmail, verificationCode);
+
+          showSuccess(response.message || '¡Cuenta verificada exitosamente! Serás redirigido al login.');
+          
+          // Limpiar formulario
+          form.reset();
+          
+          // Redirigir al login después de 2 segundos
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+          
+        } catch (error) {
+          console.error('Verification error:', error);
+          
+          if (error.message.includes('código')) {
+            showError('Código de verificación incorrecto o expirado');
+          } else if (error.message.includes('expirado')) {
+            showError('El código ha expirado. Solicita uno nuevo.');
+          } else {
+            showError(error.message || 'Error al verificar la cuenta. Inténtalo de nuevo.');
+          }
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      // Reenviar código
+      resendBtn?.addEventListener('click', async () => {
+        if (resendCooldown) return;
+        
+        if (!userEmail) {
+          showError('No se encontró información del email');
+          return;
+        }
+
+        hideMessages();
+        setResendLoading(true);
+
+        try {
+          // Usando el método correcto de tu API (solo requiere email)
+          const response = await api.resendVerificationCode(userEmail);
+
+          showSuccess(response.message || 'Código de verificación reenviado a tu email');
+          startResendTimer();
+          
+        } catch (error) {
+          console.error('Resend error:', error);
+          showError(error.message || 'Error al reenviar el código. Inténtalo de nuevo.');
+        } finally {
+          setResendLoading(false);
+        }
+      });
+
+      // Focus automático en el input
+      verificationCodeInput?.focus();
+
+      // Inicializar
+      getEmailFromURL();
+
+    }).catch(error => {
+      console.error('Error loading API:', error);
+      const errorMessage = document.getElementById('error-message');
+      const errorText = document.getElementById('error-text');
+      if (errorMessage && errorText) {
+        errorText.textContent = 'Error al cargar la aplicación. Recarga la página.';
+        errorMessage.classList.remove('hidden');
+      }
+    });
+  }
+</script>
+
+<style>
+  /* Animaciones adicionales */
+  @keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+  
+  #verification-code:focus {
+    animation: pulse-subtle 2s infinite;
+  }
+  
+  /* Estilo especial para el input del código */
+  #verification-code {
+    letter-spacing: 0.5em;
+    text-align: center;
+  }
+  
+  #verification-code::placeholder {
+    letter-spacing: 0.2em;
+  }
+</style>
