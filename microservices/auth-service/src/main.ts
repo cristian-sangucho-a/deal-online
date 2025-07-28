@@ -9,7 +9,9 @@ import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
+  
+  // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3001
+  const port = parseInt(process.env.PORT, 10) || 3001;
 
   // Habilitar CORS para permitir peticiones desde el frontend
   app.enableCors();
@@ -21,7 +23,6 @@ async function bootstrap() {
     transform: true, // Transforma los payloads a instancias de DTO
   }));
 
-  const port = configService.get<number>('PORT', 3001);
   await app.listen(port);
   console.log(`🚀 Auth Service está escuchando en el puerto ${port}`);
 }
