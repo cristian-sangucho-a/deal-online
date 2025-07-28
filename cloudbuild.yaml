@@ -175,4 +175,5 @@ images:
 
 options:
   machineType: E2_MEDIUM
+  logging: CLOUD_LOGGING_ONLY
 timeout: "1200s"
