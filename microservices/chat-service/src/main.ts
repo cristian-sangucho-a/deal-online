@@ -9,32 +9,16 @@ import { ConfigService } from '@nestjs/config';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
-  try {
-    console.log('🚀 Iniciando Chat Service...');
-    console.log(`PORT environment variable: ${process.env.PORT}`);
-    
-    const app = await NestFactory.create(AppModule);
-    console.log('✅ NestJS app created successfully');
+  const app = await NestFactory.create(AppModule);
   
-    // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3003
-    const port = parseInt(process.env.PORT || '3003', 10);
-    console.log(`🔧 Configurando puerto: ${port}`);
+  // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3003
+  const port = parseInt(process.env.PORT || '3003', 10);
 
-    app.enableCors();
-    console.log('✅ CORS habilitado');
-    
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-    console.log('✅ ValidationPipe configurado');
-    
-    app.useWebSocketAdapter(new IoAdapter(app));
-    console.log('✅ WebSocket adapter configurado');
+  app.enableCors();
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useWebSocketAdapter(new IoAdapter(app));
 
-    console.log(`🌐 Intentando escuchar en puerto ${port} en 0.0.0.0...`);
-    await app.listen(port, '0.0.0.0');
-    console.log(`🚀 Chat Service está escuchando en el puerto ${port}`);
-  } catch (error) {
-    console.error('❌ Error al iniciar Chat Service:', error);
-    throw error;
-  }
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Chat Service está escuchando en el puerto ${port}`);
 }
 bootstrap();

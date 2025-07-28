@@ -41,16 +41,9 @@ const routes = [
 ];
 
 async function bootstrap() {
-  try {
-    console.log('🚀 Iniciando API Gateway...');
-    console.log(`PORT environment variable: ${process.env.PORT}`);
-    
-    const app = await NestFactory.create<INestApplication>(AppModule);
-    console.log('✅ NestJS app created successfully');
-    
-    // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3000
-    const port = parseInt(process.env.PORT || '3000', 10);
-    console.log(`🔧 Configurando puerto: ${port}`);
+  const app = await NestFactory.create<INestApplication>(AppModule);
+  // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3000
+  const port = parseInt(process.env.PORT || '3000', 10);
 
   app.enableCors({ origin: '*' });
 
@@ -114,13 +107,8 @@ async function bootstrap() {
     }
   });
 
-  console.log(`🌐 Intentando escuchar en puerto ${port} en 0.0.0.0...`);
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 API Gateway escuchando en el puerto ${port}`);
-  } catch (error) {
-    console.error('❌ Error al iniciar API Gateway:', error);
-    throw error;
-  }
 }
 
 bootstrap();
