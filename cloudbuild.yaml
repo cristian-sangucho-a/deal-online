@@ -30,7 +30,6 @@ steps:
       - "--allow-unauthenticated"
       # Nota: Deberás configurar las variables de entorno para las URLs de los otros servicios
       # Ejemplo: --set-env-vars=AUTH_SERVICE_URL=https://auth-service-url.a.run.app
-      - "--set-env-vars=PORT=3000"
       - "--memory=512Mi"
       - "--cpu=1"
     id: "deploy-api-gateway"
