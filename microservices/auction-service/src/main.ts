@@ -12,7 +12,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3002
-  const port = parseInt(process.env.PORT, 10) || 3002;
+  const port = parseInt(process.env.PORT || '3002', 10);
 
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({

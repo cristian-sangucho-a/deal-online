@@ -11,7 +11,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // Usar process.env.PORT para compatibilidad con Cloud Run, con fallback a 3001
-  const port = parseInt(process.env.PORT, 10) || 3001;
+  const port = parseInt(process.env.PORT || '3001', 10);
 
   // Habilitar CORS para permitir peticiones desde el frontend
   app.enableCors();
