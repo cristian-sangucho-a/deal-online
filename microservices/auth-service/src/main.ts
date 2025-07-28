@@ -23,7 +23,7 @@ async function bootstrap() {
     transform: true, // Transforma los payloads a instancias de DTO
   }));
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Auth Service está escuchando en el puerto ${port}`);
 }
 bootstrap();

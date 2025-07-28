@@ -24,7 +24,7 @@ async function bootstrap() {
   // Habilitar el adaptador de WebSockets
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Auction Service está escuchando en el puerto ${port}`);
 }
 bootstrap();

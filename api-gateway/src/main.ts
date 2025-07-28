@@ -107,7 +107,7 @@ async function bootstrap() {
     }
   });
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 API Gateway escuchando en el puerto ${port}`);
 }
 
