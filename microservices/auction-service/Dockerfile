@@ -13,7 +13,7 @@ COPY package*.json ./
 RUN npm install --only=production
 COPY --from=builder /usr/src/app/dist ./dist
 
-# Exponemos el puerto 3002, que es el que usa el auction-service
-EXPOSE 3002
+# Cloud Run proporcionará automáticamente el puerto a través de la variable PORT
+# No necesitamos EXPOSE ya que Cloud Run maneja esto automáticamente
 
 CMD ["node", "dist/main"]

@@ -35,8 +35,8 @@ COPY --from=builder /usr/src/app/dist ./dist
 # Copiamos las dependencias de producción que ya se instalaron
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 
-# Exponemos el puerto 3000, el puerto del Gateway
-EXPOSE 3000
+# Cloud Run proporcionará automáticamente el puerto a través de la variable PORT
+# No necesitamos EXPOSE ya que Cloud Run maneja esto automáticamente
 
 # Comando para iniciar el servicio
 CMD ["node", "dist/main"]

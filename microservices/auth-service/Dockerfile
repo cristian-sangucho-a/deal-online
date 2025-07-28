@@ -40,8 +40,8 @@ RUN npm install --only=production
 # Copiamos la carpeta 'dist' (con el código compilado) desde la etapa 'builder'
 COPY --from=builder /usr/src/app/dist ./dist
 
-# Exponemos el puerto 3001, que es el que usa el auth-service
-EXPOSE 3001
+# Cloud Run proporcionará automáticamente el puerto a través de la variable PORT
+# No necesitamos EXPOSE ya que Cloud Run maneja esto automáticamente
 
 # El comando que se ejecutará cuando el contenedor se inicie.
 # Inicia la aplicación desde el archivo principal compilado.
