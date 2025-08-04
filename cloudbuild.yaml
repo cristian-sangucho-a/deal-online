@@ -34,6 +34,7 @@ steps:
         # Para RabbitMQ usaremos CloudAMQP (más económico que Cloud Tasks)
         echo "RabbitMQ configurado para usar CloudAMQP o servicio externo"
     id: "setup-database"
+    secretEnv: ["_DB_PASSWORD"]
 
   # ================================================================
   # Auth Service (Desplegar primero)
@@ -73,6 +74,7 @@ steps:
       - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auth_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET},RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue"
     id: "deploy-auth-service"
     waitFor: ["push-auth-service", "setup-database"]
+    secretEnv: ["_DB_PASSWORD", "_JWT_SECRET", "_RABBITMQ_URL"]
 
   # ================================================================
   # Auction Service (Desplegar segundo)
@@ -112,6 +114,7 @@ steps:
       - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auction_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
     id: "deploy-auction-service"
     waitFor: ["push-auction-service", "setup-database"]
+    secretEnv: ["_DB_PASSWORD", "_JWT_SECRET"]
 
   # ================================================================
   # Chat Service (Desplegar tercero)
@@ -150,6 +153,7 @@ steps:
       - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=chat_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
     id: "deploy-chat-service"
     waitFor: ["push-chat-service", "setup-database"]
+    secretEnv: ["_DB_PASSWORD", "_JWT_SECRET"]
 
   # ================================================================
   # Email Service (Puede desplegarse en cualquier momento)
@@ -187,6 +191,7 @@ steps:
       - "--set-env-vars=RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue,EMAIL_USER=${_EMAIL_USER},EMAIL_PASS=${_EMAIL_PASS}"
     id: "deploy-email-service"
     waitFor: ["push-email-service"]
+    secretEnv: ["_RABBITMQ_URL", "_EMAIL_USER", "_EMAIL_PASS"]
 
   # ================================================================
   # API Gateway (Desplegar al final)
