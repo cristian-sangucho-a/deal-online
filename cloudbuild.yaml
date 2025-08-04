@@ -16,12 +16,12 @@ steps:
             --region=southamerica-east1 \
             --storage-type=HDD \
             --storage-size=10GB \
-            --root-password=${_DB_PASSWORD}
+            --root-password=TempPassword123!
           
           # Crear usuario
           gcloud sql users create dealuser \
             --instance=deal-online-db \
-            --password=${_DB_PASSWORD}
+            --password=TempPassword123!
             
           # Crear bases de datos
           gcloud sql databases create auth_db --instance=deal-online-db
@@ -34,7 +34,6 @@ steps:
         # Para RabbitMQ usaremos CloudAMQP (más económico que Cloud Tasks)
         echo "RabbitMQ configurado para usar CloudAMQP o servicio externo"
     id: "setup-database"
-    secretEnv: ["_DB_PASSWORD"]
 
   # ================================================================
   # Auth Service (Desplegar primero)
@@ -71,10 +70,10 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auth_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET},RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue"
+      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auth_db,RABBITMQ_EMAIL_QUEUE=emails_queue"
+      - "--update-secrets=DB_PASSWORD=DB_PASSWORD:latest,JWT_SECRET=JWT_SECRET:latest,RABBITMQ_URL=RABBITMQ_URL:latest"
     id: "deploy-auth-service"
     waitFor: ["push-auth-service", "setup-database"]
-    secretEnv: ["_DB_PASSWORD", "_JWT_SECRET", "_RABBITMQ_URL"]
 
   # ================================================================
   # Auction Service (Desplegar segundo)
@@ -111,10 +110,10 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auction_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
+      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auction_db"
+      - "--update-secrets=DB_PASSWORD=DB_PASSWORD:latest,JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-auction-service"
     waitFor: ["push-auction-service", "setup-database"]
-    secretEnv: ["_DB_PASSWORD", "_JWT_SECRET"]
 
   # ================================================================
   # Chat Service (Desplegar tercero)
@@ -150,10 +149,10 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=chat_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
+      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=chat_db"
+      - "--update-secrets=DB_PASSWORD=DB_PASSWORD:latest,JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-chat-service"
     waitFor: ["push-chat-service", "setup-database"]
-    secretEnv: ["_DB_PASSWORD", "_JWT_SECRET"]
 
   # ================================================================
   # Email Service (Puede desplegarse en cualquier momento)
@@ -188,10 +187,10 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--set-env-vars=RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue,EMAIL_USER=${_EMAIL_USER},EMAIL_PASS=${_EMAIL_PASS}"
+      - "--set-env-vars=RABBITMQ_EMAIL_QUEUE=emails_queue"
+      - "--update-secrets=RABBITMQ_URL=RABBITMQ_URL:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASS=EMAIL_PASS:latest"
     id: "deploy-email-service"
     waitFor: ["push-email-service"]
-    secretEnv: ["_RABBITMQ_URL", "_EMAIL_USER", "_EMAIL_PASS"]
 
   # ================================================================
   # API Gateway (Desplegar al final)
@@ -250,16 +249,3 @@ options:
   machineType: E2_MEDIUM
   logging: CLOUD_LOGGING_ONLY
 timeout: "1200s"
-
-availableSecrets:
-  secretManager:
-    - versionName: projects/$PROJECT_ID/secrets/DB_PASSWORD/versions/latest
-      env: "_DB_PASSWORD"
-    - versionName: projects/$PROJECT_ID/secrets/JWT_SECRET/versions/latest
-      env: "_JWT_SECRET"
-    - versionName: projects/$PROJECT_ID/secrets/RABBITMQ_URL/versions/latest
-      env: "_RABBITMQ_URL"
-    - versionName: projects/$PROJECT_ID/secrets/EMAIL_USER/versions/latest
-      env: "_EMAIL_USER"
-    - versionName: projects/$PROJECT_ID/secrets/EMAIL_PASS/versions/latest
-      env: "_EMAIL_PASS"
