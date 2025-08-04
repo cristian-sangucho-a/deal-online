@@ -151,6 +151,27 @@ steps:
     waitFor: ["push-email-service"]
 
   # ================================================================
+  # Configurar permisos públicos para todos los servicios
+  # ================================================================
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud run services add-iam-policy-binding auth-service --region=southamerica-east1 --member="allUsers" --role="roles/run.invoker"
+        gcloud run services add-iam-policy-binding auction-service --region=southamerica-east1 --member="allUsers" --role="roles/run.invoker"
+        gcloud run services add-iam-policy-binding chat-service --region=southamerica-east1 --member="allUsers" --role="roles/run.invoker"
+        gcloud run services add-iam-policy-binding email-service --region=southamerica-east1 --member="allUsers" --role="roles/run.invoker"
+    id: "set-public-permissions"
+    waitFor:
+      [
+        "deploy-auth-service",
+        "deploy-auction-service",
+        "deploy-chat-service",
+        "deploy-email-service",
+      ]
+
+  # ================================================================
   # API Gateway (Desplegar al final)
   # ================================================================
   - name: "gcr.io/cloud-builders/docker"
@@ -189,14 +210,7 @@ steps:
           --set-env-vars="AUTH_SERVICE_URL=$$AUTH_URL,AUCTION_SERVICE_URL=$$AUCTION_URL,CHAT_SERVICE_URL=$$CHAT_URL" \
           --set-secrets="JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-api-gateway"
-    waitFor:
-      [
-        "push-api-gateway",
-        "deploy-auth-service",
-        "deploy-auction-service",
-        "deploy-chat-service",
-        "deploy-email-service",
-      ]
+    waitFor: ["push-api-gateway", "set-public-permissions"]
 
 images:
   - "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA"
