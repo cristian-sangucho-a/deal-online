@@ -3,7 +3,7 @@
 # ================================================================
 # Usamos una imagen de Node.js con Alpine Linux, que es ligera.
 # La nombramos 'builder' para poder referenciarla después.
-FROM node:20-alpine AS builder
+FROM node:18-alpine AS builder
 
 # Establecemos el directorio de trabajo dentro del contenedor
 WORKDIR /usr/src/app
@@ -27,7 +27,7 @@ RUN npm run build
 # Etapa 2: Runner - Ejecuta la aplicación construida
 # ================================================================
 # Empezamos de nuevo desde una imagen limpia de Node.js para que la imagen final sea pequeña
-FROM node:20-alpine
+FROM node:18-alpine
 
 WORKDIR /usr/src/app
 
