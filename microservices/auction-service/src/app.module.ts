@@ -15,14 +15,21 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus'; // <-- AÑADIR
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         const dbHost = config.get<string>('DB_HOST');
+        const dbPort = config.get<number>('DB_PORT');
+        const dbUsername = config.get<string>('DB_USERNAME');
+        const dbPassword = config.get<string>('DB_PASSWORD');
+        const dbDatabase = config.get<string>('DB_DATABASE');
         const isCloudSQL = dbHost && dbHost.startsWith('/cloudsql/');
         
-        console.log('🔍 Configuración de DB (Auction):');
-        console.log(`DB_HOST: ${dbHost}`);
-        console.log(`DB_PORT: ${config.get<number>('DB_PORT')}`);
-        console.log(`DB_USERNAME: ${config.get<string>('DB_USERNAME')}`);
-        console.log(`DB_DATABASE: ${config.get<string>('DB_DATABASE')}`);
+        // LOGS DE DEBUGGING DETALLADOS
+        console.log('🔍 ===== CONFIGURACIÓN COMPLETA DE DB (AUCTION) =====');
+        console.log(`DB_HOST: "${dbHost}"`);
+        console.log(`DB_PORT: ${dbPort}`);
+        console.log(`DB_USERNAME: "${dbUsername}"`);
+        console.log(`DB_PASSWORD: "${dbPassword ? dbPassword.substring(0, 4) + '****' : 'undefined'}"`);
+        console.log(`DB_DATABASE: "${dbDatabase}"`);
         console.log(`Is Cloud SQL: ${isCloudSQL}`);
+        console.log('🔍 ===============================================');
 
         return {
           type: 'postgres',
@@ -32,15 +39,15 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus'; // <-- AÑADIR
           } : {
             // Configuración para desarrollo local
             host: dbHost || 'localhost',
-            port: config.get<number>('DB_PORT') || 5432,
+            port: dbPort || 5432,
           }),
-          username: config.get<string>('DB_USERNAME') || 'postgres',
-          password: config.get<string>('DB_PASSWORD') || 'password',
-          database: config.get<string>('DB_DATABASE') || 'auction_db',
+          username: dbUsername || 'postgres',
+          password: dbPassword || 'password',
+          database: dbDatabase || 'auction_db',
           entities: [Product, Auction, Bid], // Registra todas las entidades
           synchronize: true,
           logging: ['error', 'warn'],
-          ssl: isCloudSQL ? { rejectUnauthorized: false } : false,
+          ssl: false, // Forzar SSL deshabilitado para debugging
           // Configuraciones adicionales para Cloud Run
           connectTimeoutMS: 60000,
           acquireTimeoutMillis: 60000,
