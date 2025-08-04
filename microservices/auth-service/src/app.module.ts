@@ -38,7 +38,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus'; // <-- AÑADIR
           entities: [User],
           synchronize: true,
           logging: ['error', 'warn'],
-          ssl: isCloudSQL ? { rejectUnauthorized: false } : false,
+          ssl: false, // Forzar SSL deshabilitado para debugging
           // Configuraciones adicionales para Cloud Run
           connectTimeoutMS: 60000,
           acquireTimeoutMillis: 60000,
