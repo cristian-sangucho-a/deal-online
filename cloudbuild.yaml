@@ -1,41 +1,5 @@
 steps:
   # ================================================================
-  # Crear instancia de Cloud SQL y configurar RabbitMQ (solo se ejecuta una vez)
-  # ================================================================
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: "bash"
-    args:
-      - "-c"
-      - |
-        # Verificar si la instancia ya existe
-        if ! gcloud sql instances describe deal-online-db --region=southamerica-east1 2>/dev/null; then
-          echo "Creando instancia de Cloud SQL..."
-          gcloud sql instances create deal-online-db \
-            --database-version=POSTGRES_15 \
-            --tier=db-f1-micro \
-            --region=southamerica-east1 \
-            --storage-type=HDD \
-            --storage-size=10GB \
-            --root-password=TempPassword123!
-          
-          # Crear usuario
-          gcloud sql users create dealuser \
-            --instance=deal-online-db \
-            --password=TempPassword123!
-            
-          # Crear bases de datos
-          gcloud sql databases create auth_db --instance=deal-online-db
-          gcloud sql databases create auction_db --instance=deal-online-db  
-          gcloud sql databases create chat_db --instance=deal-online-db
-        else
-          echo "La instancia Cloud SQL ya existe"
-        fi
-
-        # Para RabbitMQ usaremos CloudAMQP (más económico que Cloud Tasks)
-        echo "RabbitMQ configurado para usar CloudAMQP o servicio externo"
-    id: "setup-database"
-
-  # ================================================================
   # Auth Service (Desplegar primero)
   # ================================================================
   - name: "gcr.io/cloud-builders/docker"
@@ -47,7 +11,6 @@ steps:
         "./microservices/auth-service",
       ]
     id: "build-auth-service"
-    # No waitFor - puede ejecutarse inmediatamente
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
@@ -69,11 +32,10 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auth_db,RABBITMQ_EMAIL_QUEUE=emails_queue"
-      - "--update-secrets=DB_PASSWORD=DB_PASSWORD:latest,JWT_SECRET=JWT_SECRET:latest,RABBITMQ_URL=RABBITMQ_URL:latest"
+      - "--set-env-vars=RABBITMQ_EMAIL_QUEUE=emails_queue"
+      - "--update-secrets=DATABASE_URL=AUTH_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest,RABBITMQ_URL=RABBITMQ_URL:latest"
     id: "deploy-auth-service"
-    waitFor: ["push-auth-service", "setup-database"]
+    waitFor: ["push-auth-service"]
 
   # ================================================================
   # Auction Service (Desplegar segundo)
@@ -87,7 +49,7 @@ steps:
         "./microservices/auction-service",
       ]
     id: "build-auction-service"
-    # Puede ejecutarse en paralelo con setup-database
+    # Puede ejecutarse en paralelo con auth-service
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
@@ -109,11 +71,9 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auction_db"
-      - "--update-secrets=DB_PASSWORD=DB_PASSWORD:latest,JWT_SECRET=JWT_SECRET:latest"
+      - "--update-secrets=DATABASE_URL=AUCTION_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-auction-service"
-    waitFor: ["push-auction-service", "setup-database"]
+    waitFor: ["push-auction-service"]
 
   # ================================================================
   # Chat Service (Desplegar tercero)
@@ -148,11 +108,9 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=chat_db"
-      - "--update-secrets=DB_PASSWORD=DB_PASSWORD:latest,JWT_SECRET=JWT_SECRET:latest"
+      - "--update-secrets=DATABASE_URL=CHAT_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-chat-service"
-    waitFor: ["push-chat-service", "setup-database"]
+    waitFor: ["push-chat-service"]
 
   # ================================================================
   # Email Service (Puede desplegarse en cualquier momento)

@@ -14,47 +14,28 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus'; // <-- AÑADIR
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const dbHost = config.get<string>('DB_HOST');
-        const dbPort = config.get<number>('DB_PORT');
-        const dbUsername = config.get<string>('DB_USERNAME');
-        const dbPassword = config.get<string>('DB_PASSWORD');
-        const dbDatabase = config.get<string>('DB_DATABASE');
-        const isCloudSQL = dbHost && dbHost.startsWith('/cloudsql/');
+        const databaseUrl = config.get<string>('DATABASE_URL');
         
-        // LOGS DE DEBUGGING DETALLADOS
-        console.log('🔍 ===== CONFIGURACIÓN COMPLETA DE DB (AUCTION) =====');
-        console.log(`DB_HOST: "${dbHost}"`);
-        console.log(`DB_PORT: ${dbPort}`);
-        console.log(`DB_USERNAME: "${dbUsername}"`);
-        console.log(`DB_PASSWORD: "${dbPassword ? dbPassword.substring(0, 4) + '****' : 'undefined'}"`);
-        console.log(`DB_DATABASE: "${dbDatabase}"`);
-        console.log(`Is Cloud SQL: ${isCloudSQL}`);
-        console.log('🔍 ===============================================');
+        console.log('🔍 ===== CONFIGURACIÓN SUPABASE (AUCTION) =====');
+        console.log(`DATABASE_URL: "${databaseUrl ? databaseUrl.substring(0, 30) + '...' : 'undefined'}"`);
+        console.log('🔍 ==========================================');
+
+        if (!databaseUrl) {
+          throw new Error('DATABASE_URL is required for Supabase connection');
+        }
 
         return {
           type: 'postgres',
-          ...(isCloudSQL ? {
-            // Configuración para Cloud SQL usando Unix socket
-            host: dbHost,
-          } : {
-            // Configuración para desarrollo local
-            host: dbHost || 'localhost',
-            port: dbPort || 5432,
-          }),
-          username: dbUsername || 'postgres',
-          password: dbPassword || 'password',
-          database: dbDatabase || 'auction_db',
-          entities: [Product, Auction, Bid], // Registra todas las entidades
-          synchronize: true,
+          url: databaseUrl,
+          entities: [Product, Auction, Bid],
+          synchronize: true, // Solo para desarrollo
           logging: ['error', 'warn'],
-          ssl: false, // Forzar SSL deshabilitado para debugging
-          // Configuraciones adicionales para Cloud Run
+          ssl: {
+            rejectUnauthorized: false,
+          },
           connectTimeoutMS: 60000,
           acquireTimeoutMillis: 60000,
           timeout: 60000,
-          extra: {
-            connectionTimeoutMillis: 60000,
-          },
         };
       },
     }),
