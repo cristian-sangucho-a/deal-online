@@ -16,13 +16,12 @@ steps:
             --region=southamerica-east1 \
             --storage-type=HDD \
             --storage-size=10GB \
-            --no-backup \
-            --authorized-networks=0.0.0.0/0
+            --root-password=${_DB_PASSWORD}
           
           # Crear usuario
           gcloud sql users create dealuser \
             --instance=deal-online-db \
-            --password=DealOnline2024!
+            --password=${_DB_PASSWORD}
             
           # Crear bases de datos
           gcloud sql databases create auth_db --instance=deal-online-db
@@ -57,7 +56,6 @@ steps:
       ]
     id: "push-auth-service"
     waitFor: ["build-auth-service"]
-    waitFor: ["build-auth-service"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -72,12 +70,11 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_PASSWORD=DealOnline2024!,DB_DATABASE=auth_db,JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA=="
+      - "--set-env-vars=PORT=3001,DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auth_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET},RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue"
     id: "deploy-auth-service"
     waitFor: ["push-auth-service", "setup-database"]
 
   # ================================================================
-  # Auction Service (Desplegar segundo)
   # Auction Service (Desplegar segundo)
   # ================================================================
   - name: "gcr.io/cloud-builders/docker"
@@ -98,7 +95,6 @@ steps:
       ]
     id: "push-auction-service"
     waitFor: ["build-auction-service"]
-    waitFor: ["build-auction-service"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -113,12 +109,11 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_PASSWORD=DealOnline2024!,DB_DATABASE=auction_db,JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA=="
+      - "--set-env-vars=PORT=3002,DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auction_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
     id: "deploy-auction-service"
     waitFor: ["push-auction-service", "setup-database"]
 
   # ================================================================
-  # Chat Service (Desplegar tercero)
   # Chat Service (Desplegar tercero)
   # ================================================================
   - name: "gcr.io/cloud-builders/docker"
@@ -138,7 +133,6 @@ steps:
       ]
     id: "push-chat-service"
     waitFor: ["build-chat-service"]
-    waitFor: ["build-chat-service"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -153,12 +147,11 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_PASSWORD=DealOnline2024!,DB_DATABASE=chat_db,JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA=="
+      - "--set-env-vars=PORT=3003,DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=chat_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
     id: "deploy-chat-service"
     waitFor: ["push-chat-service", "setup-database"]
 
   # ================================================================
-  # Email Service (Puede desplegarse en cualquier momento)
   # Email Service (Puede desplegarse en cualquier momento)
   # ================================================================
   - name: "gcr.io/cloud-builders/docker"
@@ -178,7 +171,6 @@ steps:
       ]
     id: "push-email-service"
     waitFor: ["build-email-service"]
-    waitFor: ["build-email-service"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -192,7 +184,7 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--set-env-vars=RABBITMQ_URL=amqp://guest:guest@localhost:5672,RABBITMQ_EMAIL_QUEUE=emails_queue,EMAIL_USER=your-email@gmail.com,EMAIL_PASS=your-app-password"
+      - "--set-env-vars=PORT=3004,RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue,EMAIL_USER=${_EMAIL_USER},EMAIL_PASS=${_EMAIL_PASS}"
     id: "deploy-email-service"
     waitFor: ["push-email-service"]
 
@@ -216,21 +208,23 @@ steps:
       ]
     id: "push-api-gateway"
     waitFor: ["build-api-gateway"]
-    waitFor: ["build-api-gateway"]
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: gcloud
+    entrypoint: "bash"
     args:
-      - "run"
-      - "deploy"
-      - "api-gateway"
-      - "--image=southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA"
-      - "--region=southamerica-east1"
-      - "--platform=managed"
-      - "--allow-unauthenticated"
-      - "--set-env-vars=AUTH_SERVICE_URL=https://auth-service-qwebR99a.a.run.app,AUCTION_SERVICE_URL=https://auction-service-qwebR99a.a.run.app,CHAT_SERVICE_URL=https://chat-service-qwebR99a.a.run.app"
-      - "--memory=512Mi"
-      - "--cpu=1"
-      - "--timeout=300"
+      - "-c"
+      - |
+        AUTH_URL=$(gcloud run services describe auth-service --platform=managed --region=southamerica-east1 --format='value(status.url)')
+        AUCTION_URL=$(gcloud run services describe auction-service --platform=managed --region=southamerica-east1 --format='value(status.url)')
+        CHAT_URL=$(gcloud run services describe chat-service --platform=managed --region=southamerica-east1 --format='value(status.url)')
+        gcloud run deploy api-gateway \
+          --image="southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA" \
+          --region=southamerica-east1 \
+          --platform=managed \
+          --allow-unauthenticated \
+          --memory=512Mi \
+          --cpu=1 \
+          --timeout=300 \
+          --set-env-vars="PORT=3000,AUTH_SERVICE_URL=$$AUTH_URL,AUCTION_SERVICE_URL=$$AUCTION_URL,CHAT_SERVICE_URL=$$CHAT_URL"
     id: "deploy-api-gateway"
     waitFor:
       [
