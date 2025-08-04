@@ -6,10 +6,10 @@ networks:
     driver: bridge
 
 volumes:
-  auth_db_data:
-  auction_db_data:
-  chat_db_data:
-  rabbitmq_data:
+  # auth_db_data: # Comentado porque ahora se usa una DB externa (Supabase)
+  # auction_db_data: # Comentado porque ahora se usa una DB externa (Supabase)
+  # chat_db_data: # Comentado porque ahora se usa una DB externa (Supabase)
+  # rabbitmq_data: # Comentado porque ahora se usa un broker externo (CloudAMQP)
   prometheus_data:
   grafana_data:
 
@@ -17,25 +17,9 @@ volumes:
 # SERVICIOS DE INFRAESTRUCTURA Y MONITOREO
 # ================================================================
 services:
-  rabbitmq:
-    image: rabbitmq:3.9-management-alpine
-    container_name: rabbitmq
-    restart: always
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq/
-    networks:
-      - deal-network
-    environment:
-      - RABBITMQ_DEFAULT_USER=user
-      - RABBITMQ_DEFAULT_PASS=password
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # --- El servicio local de RabbitMQ ya no es necesario si usas CloudAMQP ---
+  # rabbitmq:
+  #   ...
   
   prometheus:
     image: prom/prometheus:latest
@@ -61,54 +45,6 @@ services:
       - deal-network
     depends_on:
       - prometheus
-
-  # ================================================================
-  # BASES DE DATOS DEDICADAS
-  # ================================================================
-  auth-db:
-    image: postgres:14-alpine
-    container_name: auth-db
-    restart: always
-    environment:
-      POSTGRES_DB: auth_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - auth_db_data:/var/lib/postgresql/data
-    ports:
-      - "5431:5432"
-    networks:
-      - deal-network
-
-  auction-db:
-    image: postgres:14-alpine
-    container_name: auction-db
-    restart: always
-    environment:
-      POSTGRES_DB: auction_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - auction_db_data:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
-    networks:
-      - deal-network
-
-  chat-db:
-    image: postgres:14-alpine
-    container_name: chat-db
-    restart: always
-    environment:
-      POSTGRES_DB: chat_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - chat_db_data:/var/lib/postgresql/data
-    ports:
-      - "5434:5432"
-    networks:
-      - deal-network
 
   # ================================================================
   # PUNTO DE ENTRADA Y MICROSERVICIOS
@@ -138,20 +74,12 @@ services:
     environment:
       - PORT=3001
       - JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA==
-      - DB_HOST=auth-db
-      - DB_PORT=5432
-      - DB_USERNAME=user
-      - DB_PASSWORD=password
-      - DB_DATABASE=auth_db
-      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      # --- URL ACTUALIZADA AL CONNECTION POOLER ---
+      - DATABASE_URL=postgresql://postgres.qtmxwmlbaitrjwwkfyyu:asda23drasf43f3@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
+      - RABBITMQ_URL=amqps://sylvipgr:PxkPXofuAy3mafqSj3yT9zpIB-u128nc@albatross.rmq.cloudamqp.com/sylvipgr
       - RABBITMQ_EMAIL_QUEUE=emails_queue
     networks:
       - deal-network
-    depends_on:
-      auth-db:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
 
   auction-service:
     build:
@@ -160,17 +88,11 @@ services:
     restart: always
     environment:
       - PORT=3002
-      - DB_HOST=auction-db
-      - DB_PORT=5432
-      - DB_USERNAME=user
-      - DB_PASSWORD=password
-      - DB_DATABASE=auction_db
+      # --- URL ACTUALIZADA AL CONNECTION POOLER ---
+      - DATABASE_URL=postgresql://postgres.bpggeirwhwnqqwbjvxob:sad435sdgdasd@aws-0-us-east-2.pooler.supabase.com:5432/postgres
       - JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA==
     networks:
       - deal-network
-    depends_on:
-      auction-db:
-        condition: service_started
 
   chat-service:
     build:
@@ -179,17 +101,11 @@ services:
     restart: always
     environment:
       - PORT=3003
-      - DB_HOST=chat-db
-      - DB_PORT=5432
-      - DB_USERNAME=user
-      - DB_PASSWORD=password
-      - DB_DATABASE=chat_db
+      # --- URL ACTUALIZADA AL CONNECTION POOLER ---
+      - DATABASE_URL=postgresql://postgres.scqbglnhemejcpngxfcx:ewrwr234rxfv@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
       - JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA==
     networks:
       - deal-network
-    depends_on:
-      chat-db:
-        condition: service_started
 
   email-service:
     build:
@@ -197,17 +113,14 @@ services:
     container_name: email-service
     restart: always
     environment:
-      - RABBITMQ_URL=amqp://user:password@rabbitmq:5672
+      - RABBITMQ_URL=amqps://sylvipgr:PxkPXofuAy3mafqSj3yT9zpIB-u128nc@albatross.rmq.cloudamqp.com/sylvipgr
       - RABBITMQ_EMAIL_QUEUE=emails_queue
       - EMAIL_FROM_NAME=Deal Online
       - EMAIL_FROM_ADDRESS=sebasdelpm@gmail.com
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=465
       - SMTP_SECURE=true
-      - SMTP_USER=sebasdelpm@gmail.com
-      - SMTP_PASS=rvfbornjpqfhpgnq
+      - EMAIL_USER=sebasdelpm@gmail.com
+      - EMAIL_PASS=rvfbornjpqfhpgnq
     networks:
       - deal-network
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
