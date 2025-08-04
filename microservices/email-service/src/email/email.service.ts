@@ -14,7 +14,7 @@ export class EmailService implements OnModuleInit {
   async onModuleInit() {
     try {
       // Configuración correcta para Gmail usando las variables de entorno de Cloud Run
-      this.transporter = nodemailer.createTransporter({
+      this.transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com', // ✅ CORRECTO: No 127.0.0.1
         port: 587,
         secure: false, // true para puerto 465, false para otros puertos
