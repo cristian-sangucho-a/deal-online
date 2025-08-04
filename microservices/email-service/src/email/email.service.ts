@@ -12,30 +12,27 @@ export class EmailService implements OnModuleInit {
 
   // Este hook se ejecuta una vez que el módulo se ha inicializado.
   async onModuleInit() {
-    // Leemos las nuevas variables de entorno para SMTP
-    const host = this.configService.get<string>('SMTP_HOST');
-    const port = this.configService.get<number>('SMTP_PORT');
-    const secure = this.configService.get<boolean>('SMTP_SECURE');
-    const user = this.configService.get<string>('SMTP_USER');
-    const pass = this.configService.get<string>('SMTP_PASS');
-
-    // Creamos el transportador de Nodemailer con la configuración de Gmail
-    this.transporter = nodemailer.createTransport({
-      host: host,
-      port: port,
-      secure: secure, // true para el puerto 465
-      auth: {
-        user: user, // tu.correo@gmail.com
-        pass: pass, // La contraseña de aplicación de 16 dígitos
-      },
-    });
-
-    // Verificamos que la conexión SMTP funcione
     try {
+      // Configuración correcta para Gmail usando las variables de entorno de Cloud Run
+      this.transporter = nodemailer.createTransporter({
+        host: 'smtp.gmail.com', // ✅ CORRECTO: No 127.0.0.1
+        port: 587,
+        secure: false, // true para puerto 465, false para otros puertos
+        auth: {
+          user: this.configService.get<string>('EMAIL_USER'),
+          pass: this.configService.get<string>('EMAIL_PASS'),
+        },
+        tls: {
+          rejectUnauthorized: false, // Para evitar problemas SSL en Cloud Run
+        },
+      });
+
+      // Verificar la conexión
       await this.transporter.verify();
-      console.log('✅ Servidor SMTP de Gmail conectado y listo para enviar correos.');
+      console.log('✅ Conexión SMTP configurada correctamente para Gmail');
     } catch (error) {
       console.error('❌ Error al conectar con el servidor SMTP de Gmail:', error);
+      // No lanzar error para que el servicio pueda iniciar
     }
   }
 
@@ -66,19 +63,24 @@ export class EmailService implements OnModuleInit {
   }
 
   private async sendEmail(to: string, subject: string, html: string) {
-    const fromName = this.configService.get<string>('EMAIL_FROM_NAME');
-    const fromAddress = this.configService.get<string>('EMAIL_FROM_ADDRESS');
-
-    const mailOptions = {
-      from: `"${fromName}" <${fromAddress}>`,
-      to: to,
-      subject: subject,
-      html: html,
-    };
-
     try {
+      if (!this.transporter) {
+        throw new Error('SMTP transporter not initialized');
+      }
+
+      const fromEmail = this.configService.get<string>('EMAIL_USER');
+      const fromName = 'Deal Online';
+
+      const mailOptions = {
+        from: `"${fromName}" <${fromEmail}>`,
+        to: to,
+        subject: subject,
+        html: html,
+      };
+
       const info = await this.transporter.sendMail(mailOptions);
-      console.log(`📧 Email enviado a ${to}. Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
+      console.log(`📧 Email enviado a ${to}. Message ID: ${info.messageId}`);
+      return info;
     } catch (error) {
       console.error(`❌ Error al enviar email a ${to}:`, error);
       throw error; // Lanza el error para que el controller pueda manejar el `nack`.

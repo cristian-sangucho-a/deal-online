@@ -13,6 +13,16 @@ async function bootstrap() {
   // Obtenemos las variables de entorno en constantes
   const rabbitmqUrl = configService.get<string>('RABBITMQ_URL');
   const emailQueue = configService.get<string>('RABBITMQ_EMAIL_QUEUE');
+  const emailUser = configService.get<string>('EMAIL_USER');
+  const emailPass = configService.get<string>('EMAIL_PASS');
+
+  // Logging de configuración
+  console.log('🔍 ===== CONFIGURACIÓN EMAIL SERVICE =====');
+  console.log(`RABBITMQ_URL: ${rabbitmqUrl ? 'SET' : 'NOT SET'}`);
+  console.log(`EMAIL_USER: ${emailUser ? 'SET' : 'NOT SET'}`);
+  console.log(`EMAIL_PASS: ${emailPass ? 'SET' : 'NOT SET'}`);
+  console.log(`RABBITMQ_EMAIL_QUEUE: ${emailQueue}`);
+  console.log('🔍 =========================================');
 
   // Validamos que las variables existan. Si no, la aplicación no debe iniciar.
   if (!rabbitmqUrl || !emailQueue) {
@@ -20,8 +30,20 @@ async function bootstrap() {
   }
   // --- FIN DE LA CORRECCIÓN ---
 
-  // Ahora creamos el microservicio usando las variables validadas
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
+  // 1. Crear la aplicación HTTP para health checks
+  const app = await NestFactory.create(AppModule);
+  
+  // 2. Agregar endpoint básico de health check
+  app.getHttpAdapter().get('/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'OK', 
+      service: 'email-service',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // 3. Crear el microservicio RabbitMQ
+  const microservice = app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
       urls: [rabbitmqUrl], // Ahora TypeScript sabe que esto es un 'string'
@@ -39,7 +61,16 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
   }));
 
-  await app.listen();
+  // 4. Iniciar ambos servicios
+  await app.startAllMicroservices();
+  const port = process.env.PORT || 8080;
+  await app.listen(port);
+  
   console.log('🚀 Email Service está escuchando eventos de RabbitMQ');
+  console.log(`🌐 HTTP Server corriendo en puerto ${port}`);
 }
-bootstrap();
+
+bootstrap().catch(err => {
+  console.error('❌ Error al iniciar Email Service:', err);
+  process.exit(1);
+});
