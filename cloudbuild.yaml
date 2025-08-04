@@ -70,7 +70,7 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=PORT=3001,DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auth_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET},RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue"
+      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auth_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET},RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue"
     id: "deploy-auth-service"
     waitFor: ["push-auth-service", "setup-database"]
 
@@ -109,7 +109,7 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=PORT=3002,DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auction_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
+      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=auction_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
     id: "deploy-auction-service"
     waitFor: ["push-auction-service", "setup-database"]
 
@@ -147,7 +147,7 @@ steps:
       - "--cpu=1"
       - "--timeout=300"
       - "--add-cloudsql-instances=$PROJECT_ID:southamerica-east1:deal-online-db"
-      - "--set-env-vars=PORT=3003,DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=chat_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
+      - "--set-env-vars=DB_HOST=/cloudsql/$PROJECT_ID:southamerica-east1:deal-online-db,DB_PORT=5432,DB_USERNAME=dealuser,DB_DATABASE=chat_db,DB_PASSWORD=${_DB_PASSWORD},JWT_SECRET=${_JWT_SECRET}"
     id: "deploy-chat-service"
     waitFor: ["push-chat-service", "setup-database"]
 
@@ -184,7 +184,7 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--set-env-vars=PORT=3004,RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue,EMAIL_USER=${_EMAIL_USER},EMAIL_PASS=${_EMAIL_PASS}"
+      - "--set-env-vars=RABBITMQ_URL=${_RABBITMQ_URL},RABBITMQ_EMAIL_QUEUE=emails_queue,EMAIL_USER=${_EMAIL_USER},EMAIL_PASS=${_EMAIL_PASS}"
     id: "deploy-email-service"
     waitFor: ["push-email-service"]
 
@@ -224,7 +224,7 @@ steps:
           --memory=512Mi \
           --cpu=1 \
           --timeout=300 \
-          --set-env-vars="PORT=3000,AUTH_SERVICE_URL=$$AUTH_URL,AUCTION_SERVICE_URL=$$AUCTION_URL,CHAT_SERVICE_URL=$$CHAT_URL"
+          --set-env-vars="AUTH_SERVICE_URL=$$AUTH_URL,AUCTION_SERVICE_URL=$$AUCTION_URL,CHAT_SERVICE_URL=$$CHAT_URL"
     id: "deploy-api-gateway"
     waitFor:
       [
