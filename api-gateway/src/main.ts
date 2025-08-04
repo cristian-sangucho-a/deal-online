@@ -1,17 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ConfigService } from '@nestjs/config';
 import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { INestApplication } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 
-// Las rutas ahora se construyen dinámicamente
+// Las rutas ahora se construyen dinámicamente desde variables de entorno
 const routes = [
   { 
     path: '/api/auth', 
     target: process.env.AUTH_SERVICE_URL || 'http://auth-service:3001', 
-    secure: true, 
+    secure: false, // Corregido: Las rutas de autenticación deben ser públicas
     ws: false 
   },
   { 
@@ -27,15 +26,15 @@ const routes = [
     ws: false 
   },
   { 
-    path: '/auction', 
+    path: '/auction/socket.io', // Ruta completa para el handshake de WS
     target: (process.env.AUCTION_SERVICE_URL || 'http://auction-service:3002').replace('http', 'ws'), 
-    secure: true, 
+    secure: false, 
     ws: true 
   },
   { 
-    path: '/chat', 
+    path: '/chat/socket.io', // Ruta completa para el handshake de WS
     target: (process.env.CHAT_SERVICE_URL || 'http://chat-service:3003').replace('http', 'ws'), 
-    secure: true, 
+    secure: false, 
     ws: true 
   },
 ];
@@ -49,23 +48,32 @@ async function bootstrap() {
 
   const jwtAuthGuard = app.get(JwtAuthGuard);
 
+  const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const context = { switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }) } as any;
+      const canActivate = await Promise.resolve(jwtAuthGuard.canActivate(context));
+      if (canActivate) {
+        next();
+      } else {
+        res.status(401).send({ message: 'Unauthorized' });
+      }
+    } catch (err) {
+      res.status(401).send({ message: 'Unauthorized', error: (err as Error).message });
+    }
+  };
+
+  // Configurar proxies para rutas HTTP
   routes.filter(r => !r.ws).forEach(route => {
-    // Extraemos el prefijo que el microservicio espera (ej. /auth, /auctions)
     const servicePrefix = route.path.replace('/api', '');
 
     const proxy = createProxyMiddleware({
       target: route.target,
       changeOrigin: true,
-      // La nueva regla de reescritura que arregla el problema
       pathRewrite: (path, req) => {
-        // 'path' es la URL después de que Express quita el prefijo del 'app.use'.
-        // Ejemplo: para /api/auth/register, el 'path' es '/register'.
-        // La función devuelve servicePrefix + path -> '/auth' + '/register' -> '/auth/register'
-        // ¡Esta es la ruta correcta que el auth-service espera!
         return servicePrefix + path;
       },
       on: {
-        proxyReq: (proxyReq, req: any, res) => {
+        proxyReq: (proxyReq, req: any) => {
           if (route.secure && req.user) {
             proxyReq.setHeader('x-user-payload', JSON.stringify(req.user));
           }
@@ -74,20 +82,6 @@ async function bootstrap() {
       }
     });
 
-    const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const context = { switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }) } as any;
-        const canActivate = await Promise.resolve(jwtAuthGuard.canActivate(context));
-        if (canActivate) {
-          next();
-        } else {
-          res.status(401).send({ message: 'Unauthorized' });
-        }
-      } catch (err) {
-        res.status(401).send({ message: 'Unauthorized', error: (err as Error).message });
-      }
-    };
-
     if (route.secure) {
       app.use(route.path, authMiddleware, proxy);
     } else {
@@ -95,16 +89,13 @@ async function bootstrap() {
     }
   });
 
-  const server = app.getHttpServer();
-  server.on('upgrade', (req, socket, head) => {
-    const matchingProxy = routes.find(route => route.ws && req.url?.startsWith(route.path));
-    if (matchingProxy) {
-      const proxyMiddleware = createProxyMiddleware({ target: matchingProxy.target, ws: true, changeOrigin: true });
-      proxyMiddleware.upgrade?.(req, socket, head);
-      console.log(`Redirigiendo WebSocket para ${req.url} a ${matchingProxy.target}`);
-    } else {
-      socket.destroy();
-    }
+  // Configurar proxies para rutas WebSocket
+  routes.filter(r => r.ws).forEach(route => {
+      app.use(route.path, createProxyMiddleware({
+          target: route.target,
+          ws: true,
+          changeOrigin: true,
+      }));
   });
 
   await app.listen(port, '0.0.0.0');
