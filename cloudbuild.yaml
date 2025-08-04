@@ -32,10 +32,8 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--clear-env-vars"
-      - "--clear-secrets"
       - "--set-env-vars=RABBITMQ_EMAIL_QUEUE=emails_queue"
-      - "--update-secrets=DATABASE_URL=AUTH_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest,RABBITMQ_URL=RABBITMQ_URL:latest"
+      - "--set-secrets=DATABASE_URL=AUTH_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest,RABBITMQ_URL=RABBITMQ_URL:latest"
     id: "deploy-auth-service"
     waitFor: ["push-auth-service"]
 
@@ -73,9 +71,7 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--clear-env-vars"
-      - "--clear-secrets"
-      - "--update-secrets=DATABASE_URL=AUCTION_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest"
+      - "--set-secrets=DATABASE_URL=AUCTION_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-auction-service"
     waitFor: ["push-auction-service"]
 
@@ -112,9 +108,7 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--clear-env-vars"
-      - "--clear-secrets"
-      - "--update-secrets=DATABASE_URL=CHAT_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest"
+      - "--set-secrets=DATABASE_URL=CHAT_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-chat-service"
     waitFor: ["push-chat-service"]
 
@@ -151,10 +145,8 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--clear-env-vars"
-      - "--clear-secrets"
       - "--set-env-vars=RABBITMQ_EMAIL_QUEUE=emails_queue"
-      - "--update-secrets=RABBITMQ_URL=RABBITMQ_URL:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASS=EMAIL_PASS:latest"
+      - "--set-secrets=RABBITMQ_URL=RABBITMQ_URL:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASS=EMAIL_PASS:latest"
     id: "deploy-email-service"
     waitFor: ["push-email-service"]
 
