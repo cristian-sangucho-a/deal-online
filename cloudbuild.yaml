@@ -186,7 +186,8 @@ steps:
           --memory=512Mi \
           --cpu=1 \
           --timeout=300 \
-          --set-env-vars="AUTH_SERVICE_URL=$$AUTH_URL,AUCTION_SERVICE_URL=$$AUCTION_URL,CHAT_SERVICE_URL=$$CHAT_URL"
+          --set-env-vars="AUTH_SERVICE_URL=$$AUTH_URL,AUCTION_SERVICE_URL=$$AUCTION_URL,CHAT_SERVICE_URL=$$CHAT_URL" \
+          --set-secrets="JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-api-gateway"
     waitFor:
       [
@@ -194,6 +195,7 @@ steps:
         "deploy-auth-service",
         "deploy-auction-service",
         "deploy-chat-service",
+        "deploy-email-service",
       ]
 
 images:
