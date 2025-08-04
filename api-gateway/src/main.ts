@@ -11,7 +11,7 @@ const routes = [
   { 
     path: '/api/auth', 
     target: process.env.AUTH_SERVICE_URL || 'http://auth-service:3001', 
-    secure: false, 
+    secure: true, 
     ws: false 
   },
   { 
@@ -29,13 +29,13 @@ const routes = [
   { 
     path: '/auction', 
     target: (process.env.AUCTION_SERVICE_URL || 'http://auction-service:3002').replace('http', 'ws'), 
-    secure: false, 
+    secure: true, 
     ws: true 
   },
   { 
     path: '/chat', 
     target: (process.env.CHAT_SERVICE_URL || 'http://chat-service:3003').replace('http', 'ws'), 
-    secure: false, 
+    secure: true, 
     ws: true 
   },
 ];
