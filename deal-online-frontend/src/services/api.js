@@ -4,10 +4,23 @@ const WS_BASE_URL = import.meta.env.PUBLIC_WS_URL || "ws://localhost:3051";
 
 // Debug: mostrar la URL base que se está usando
 console.log(`🔧 API_BASE_URL configurada: ${API_BASE_URL}`);
-console.log(`🔧 Variables de entorno:`, {
+console.log(`🔧 WS_BASE_URL configurada: ${WS_BASE_URL}`);
+console.log(`🔧 Variables de entorno import.meta.env:`, {
   PUBLIC_API_URL: import.meta.env.PUBLIC_API_URL,
   PUBLIC_WS_URL: import.meta.env.PUBLIC_WS_URL,
+  PUBLIC_SUPABASE_URL: import.meta.env.PUBLIC_SUPABASE_URL,
+  NODE_ENV: import.meta.env.NODE_ENV,
 });
+
+// También verificar process.env para depuración
+if (typeof process !== "undefined" && process.env) {
+  console.log(`🔧 Variables de entorno process.env:`, {
+    PUBLIC_API_URL: process.env.PUBLIC_API_URL,
+    PUBLIC_WS_URL: process.env.PUBLIC_WS_URL,
+    PUBLIC_SUPABASE_URL: process.env.PUBLIC_SUPABASE_URL,
+    NODE_ENV: process.env.NODE_ENV,
+  });
+}
 
 export class ApiError extends Error {
   constructor(message, status, data) {

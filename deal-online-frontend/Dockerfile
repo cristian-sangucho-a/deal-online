@@ -48,8 +48,16 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
 
+# Create a startup script to debug environment variables
+RUN echo '#!/bin/sh' > start.sh && \
+    echo 'echo "=== Environment Variables ===" ' >> start.sh && \
+    echo 'printenv | grep PUBLIC_ || echo "No PUBLIC_ variables found"' >> start.sh && \
+    echo 'echo "============================" ' >> start.sh && \
+    echo 'node ./dist/server/entry.mjs' >> start.sh && \
+    chmod +x start.sh
+
 # Expose port 3000 (Astro Node.js server default)
 EXPOSE 3000
 
-# Start the Astro Node.js server
-CMD ["node", "./dist/server/entry.mjs"]
+# Start the Astro Node.js server with debug info
+CMD ["./start.sh"]
