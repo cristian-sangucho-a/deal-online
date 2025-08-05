@@ -1,3 +1,5 @@
+// auction.controller.ts
+
 import { Controller, Post, Body, Get, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { AuctionService } from './auction.service';
 import { CreateAuctionDto } from './dto/create-auction.dto';
@@ -9,7 +11,7 @@ import { AuthGuard } from '../common/guards/auth.guard';
 export class AuctionController {
   constructor(private readonly auctionService: AuctionService) { }
 
-  @UseGuards(AuthGuard) // Protege esta ruta
+  @UseGuards(AuthGuard)
   @Post()
   create(@Body() createAuctionDto: CreateAuctionDto, @CurrentUser() user: any) {
     return this.auctionService.createAuction(createAuctionDto, user);
@@ -20,12 +22,23 @@ export class AuctionController {
     return this.auctionService.findAllActive();
   }
 
+  // --- INICIO DE LA CORRECCIÓN ---
+  // Mover la ruta estática ANTES de la ruta con parámetro.
+  @UseGuards(AuthGuard)
+  @Get('my-auctions')
+  findMyAuctions(@CurrentUser() user: any) {
+    // El decorador @CurrentUser extrae el payload del usuario del token
+    // (que fue inyectado por el AuthGuard).
+    return this.auctionService.findByOwner(user.userId);
+  }
+  // --- FIN DE LA CORRECCIÓN ---
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.auctionService.findOne(id);
   }
 
-  @UseGuards(AuthGuard) // Protege esta ruta
+  @UseGuards(AuthGuard)
   @Post(':id/bids')
   placeBid(
     @Param('id', ParseIntPipe) id: number,
@@ -35,12 +48,5 @@ export class AuctionController {
     return this.auctionService.placeBid(id, placeBidDto, user);
   }
 
-  @UseGuards(AuthGuard)
-  @Get('my-auctions')
-  findMyAuctions(@CurrentUser() user: any) {
-    // El decorador @CurrentUser extrae el payload del usuario del token
-    // (que fue inyectado por el AuthGuard).
-    return this.auctionService.findByOwner(user.userId);
-  }
-
+  // La ruta 'my-auctions' fue movida hacia arriba.
 }
