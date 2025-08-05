@@ -1,6 +1,15 @@
 // auction.controller.ts
 
-import { Controller, Post, Body, Get, Param, ParseIntPipe, UseGuards, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuctionService } from './auction.service';
 import { CreateAuctionDto } from './dto/create-auction.dto';
 import { PlaceBidDto } from './dto/place-bid.dto';
@@ -9,13 +18,15 @@ import { AuthGuard } from '../common/guards/auth.guard';
 
 @Controller('auctions')
 export class AuctionController {
-  constructor(private readonly auctionService: AuctionService) { }
+  constructor(private readonly auctionService: AuctionService) {}
 
   @UseGuards(AuthGuard)
   @Post()
   create(@Body() createAuctionDto: CreateAuctionDto, @CurrentUser() user: any) {
     if (!user) {
-      throw new UnauthorizedException('No se encontró la información del usuario en la petición.');
+      throw new UnauthorizedException(
+        'No se encontró la información del usuario en la petición.',
+      );
     }
     return this.auctionService.createAuction(createAuctionDto, user);
   }
@@ -31,7 +42,9 @@ export class AuctionController {
     // --- INICIO DE LA CORRECCIÓN ---
     // Añadimos una comprobación para asegurarnos de que el payload del usuario existe.
     if (!user || !user.userId) {
-      throw new UnauthorizedException('No se encontró la información del usuario en la petición.');
+      throw new UnauthorizedException(
+        'No se encontró la información del usuario en la petición.',
+      );
     }
     // --- FIN DE LA CORRECCIÓN ---
     return this.auctionService.findByOwner(user.userId);
@@ -50,8 +63,21 @@ export class AuctionController {
     @CurrentUser() user: any,
   ) {
     if (!user) {
-      throw new UnauthorizedException('No se encontró la información del usuario en la petición.');
+      throw new UnauthorizedException(
+        'No se encontró la información del usuario en la petición.',
+      );
     }
     return this.auctionService.placeBid(id, placeBidDto, user);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('bids/my-bids')
+  findMyBids(@CurrentUser() user: any) {
+    if (!user || !user.userId) {
+      throw new UnauthorizedException(
+        'No se encontró la información del usuario.',
+      );
+    }
+    return this.auctionService.findBidsByUser(user.userId);
   }
 }

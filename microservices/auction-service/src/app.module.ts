@@ -1,23 +1,26 @@
+// microservices/auction-service/src/app.module.ts
+
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuctionModule } from './auction/auction.module';
-import { Product } from './auction/entities/product.entity';
-import { Auction } from './auction/entities/auction.entity';
-import { Bid } from './auction/entities/bid.entity';
-import { PrometheusModule } from '@willsoto/nestjs-prometheus'; // <-- AÑADIR
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+
+// Ya no es necesario importar cada entidad aquí cuando se usa autoLoadEntities
 
 @Module({
   imports: [
-    PrometheusModule.register(), // <-- AÑADIR ESTA LÍNEA
+    PrometheusModule.register(),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         const databaseUrl = config.get<string>('DATABASE_URL');
-        
+
         console.log('🔍 ===== CONFIGURACIÓN SUPABASE (AUCTION) =====');
-        console.log(`DATABASE_URL: "${databaseUrl ? databaseUrl.substring(0, 30) + '...' : 'undefined'}"`);
+        console.log(
+          `DATABASE_URL: "${databaseUrl ? databaseUrl.substring(0, 30) + '...' : 'undefined'}"`,
+        );
         console.log('🔍 ==========================================');
 
         if (!databaseUrl) {
@@ -27,7 +30,8 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus'; // <-- AÑADIR
         return {
           type: 'postgres',
           url: databaseUrl,
-          entities: [Product, Auction, Bid],
+          // entities: [Product, Auction, Bid], // <-- ESTA LÍNEA SE ELIMINA
+          autoLoadEntities: true, // <-- Y SE REEMPLAZA POR ESTA LÍNEA MÁGICA
           synchronize: true, // Solo para desarrollo
           logging: ['error', 'warn'],
           ssl: {

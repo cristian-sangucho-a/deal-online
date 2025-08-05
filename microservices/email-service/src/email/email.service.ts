@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
 import { UserEventPayloadDto } from './dto/user-event-payload.dto';
+import { AuctionClosedPayloadDto } from './dto/auction-closed-payload.dto';
+import { NewBidPayloadDto } from './dto/new-bid-payload.dto';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -31,7 +33,10 @@ export class EmailService implements OnModuleInit {
       await this.transporter.verify();
       console.log('✅ Conexión SMTP configurada correctamente para Gmail');
     } catch (error) {
-      console.error('❌ Error al conectar con el servidor SMTP de Gmail:', error);
+      console.error(
+        '❌ Error al conectar con el servidor SMTP de Gmail:',
+        error,
+      );
       // No lanzar error para que el servicio pueda iniciar
     }
   }
@@ -60,6 +65,59 @@ export class EmailService implements OnModuleInit {
     `;
 
     await this.sendEmail(email, subject, html);
+  }
+
+  async sendNewBidNotification(payload: NewBidPayloadDto) {
+    const {
+      productOwnerEmail,
+      productOwnerName,
+      productName,
+      bidAmount,
+      bidderName,
+      auctionId,
+    } = payload;
+    const subject = `¡Nueva oferta en tu producto: ${productName}!`;
+    const html = `
+      <h1>Hola, ${productOwnerName},</h1>
+      <p>El usuario <strong>${bidderName}</strong> ha realizado una nueva oferta de <strong>$${bidAmount.toFixed(2)}</strong> por tu producto "${productName}".</p>
+      <p>¡La competencia está activa!</p>
+      <p>Puedes ver la subasta haciendo clic en el siguiente enlace:</p>
+      <p><a href="https://tu-frontend.com/auctions/${auctionId}">Ver la subasta</a></p>
+    `;
+    await this.sendEmail(productOwnerEmail, subject, html);
+  }
+
+  async sendAuctionClosedNotification(payload: AuctionClosedPayloadDto) {
+    const {
+      productName,
+      sellerEmail,
+      sellerName,
+      winnerEmail,
+      winnerName,
+      winningAmount,
+      auctionId,
+    } = payload;
+
+    // 1. Correo para el ganador
+    const winnerSubject = `¡Felicidades! Ganaste la subasta de ${productName}`;
+    const winnerHtml = `
+      <h1>¡Felicidades, ${winnerName}!</h1>
+      <p>Has ganado la subasta del producto <strong>${productName}</strong> con tu oferta de <strong>$${winningAmount.toFixed(2)}</strong>.</p>
+      <p>Pronto el vendedor se pondrá en contacto contigo. También puedes ver los detalles en la página de la subasta.</p>
+      <p><a href="https://tu-frontend.com/auctions/${auctionId}">Ver detalles de la subasta</a></p>
+    `;
+    await this.sendEmail(winnerEmail, winnerSubject, winnerHtml);
+
+    // 2. Correo para el vendedor
+    const sellerSubject = `¡Tu subasta para ${productName} ha finalizado!`;
+    const sellerHtml = `
+      <h1>¡Hola, ${sellerName}!</h1>
+      <p>Tu subasta para el producto <strong>${productName}</strong> ha finalizado.</p>
+      <p>La oferta ganadora fue de <strong>$${winningAmount.toFixed(2)}</strong> por el usuario <strong>${winnerName}</strong>.</p>
+      <p>Ponte en contacto con el ganador para coordinar la entrega. Puedes ver sus detalles en la página de la subasta.</p>
+      <p><a href="https://tu-frontend.com/auctions/${auctionId}">Ver detalles de la subasta</a></p>
+    `;
+    await this.sendEmail(sellerEmail, sellerSubject, sellerHtml);
   }
 
   private async sendEmail(to: string, subject: string, html: string) {

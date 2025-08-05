@@ -1,53 +1,46 @@
 ---
+// CORRECCIÓN: La interfaz de Props ahora espera un objeto 'auction', que es lo que recibe de la página de listado.
 export interface Props {
-  product: {
+  auction: {
     id: number;
-    name: string;
-    description: string;
-    image_url?: string;
-    auction?: {
-      id?: number;
-      current_price?: number;
-      end_time?: string;
-      status?: string;
-      bids?: Array<{
-        id?: number;
-        amount?: number;
-        bidder?: {
-          id?: number;
-          nombre?: string;
-        };
-      }>;
-      winning_bid?: {
-        id?: number;
-        amount?: number;
-        bidder?: {
-          id?: number;
-          nombre?: string;
-        };
-      };
+    current_price: number;
+    end_time: string;
+    status: string;
+    bids?: Array<{ id: number }>;
+    product: {
+      id: number;
+      name: string;
+      description: string;
+      image_url?: string;
     };
   };
 }
 
-const { product } = Astro.props;
-const auction = product?.auction ?? {};
-const hasAuction = auction?.status && auction.status !== 'closed';
-const bidsCount = auction?.bids?.length ?? 0;
-const endTime = auction?.end_time ? new Date(auction.end_time) : null;
-const isEnding = endTime && (endTime.getTime() - Date.now()) < 24 * 60 * 60 * 1000; // 24 hours
-const currentPrice = auction?.current_price ?? 0;
+// CORRECCIÓN: Obtenemos 'auction' directamente de las props.
+const { auction } = Astro.props;
+// CORRECCIÓN: El producto es ahora una propiedad de la subasta.
+const product = auction.product;
+
+// CORRECCIÓN: Las variables se derivan directamente de la 'auction'.
+const hasAuction = auction.status === 'active';
+const bidsCount = auction.bids?.length ?? 0;
+const endTime = auction.end_time ? new Date(auction.end_time) : null;
+// La lógica para determinar si está por terminar sigue siendo válida.
+const isEnding = endTime && (endTime.getTime() - Date.now()) < 24 * 60 * 60 * 1000;
+const currentPrice = auction.current_price ?? 0;
 ---
 
 <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
   <div class="relative">
-    <img 
-      src={product?.image_url || 'https://images.pexels.com/photos/4465124/pexels-photo-4465124.jpeg?auto=compress&cs=tinysrgb&w=800'} 
+    {/* CORRECCIÓN: Usamos los datos del objeto 'product' que está dentro de 'auction' */}
+    <img
+      src={product?.image_url || 'https://placehold.co/400x400'}
       alt={product?.name || 'Producto'}
       class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
       loading="lazy"
     />
     
+    {/* Esta lógica para los badges sigue funcionando correctamente */}
     {hasAuction && (
       <div class="absolute top-3 left-3">
         {isEnding ? (
@@ -69,17 +62,19 @@ const currentPrice = auction?.current_price ?? 0;
     )}
   </div>
 
-  <div class="p-4">
-    <h3 class="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
-      {product?.name || 'Nombre no disponible'}
-    </h3>
-    
-    <p class="text-gray-600 text-sm mb-3 line-clamp-2">
-      {product?.description || 'Descripción no disponible'}
-    </p>
+  <div class="p-4 flex flex-col justify-between" style="min-height: 14rem;">
+    <div>
+      <h3 class="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+        {product?.name || 'Nombre no disponible'}
+      </h3>
+      
+      <p class="text-gray-600 text-sm mb-3 line-clamp-2">
+        {product?.description || 'Descripción no disponible'}
+      </p>
+    </div>
 
     {hasAuction ? (
-      <div class="space-y-2">
+      <div class="space-y-2 mt-auto">
         <div class="flex items-center justify-between">
           <span class="text-sm text-gray-500">Precio actual:</span>
           <span class="text-xl font-bold text-primary-600">
@@ -91,14 +86,16 @@ const currentPrice = auction?.current_price ?? 0;
           <div class="flex items-center justify-between text-sm">
             <span class="text-gray-500">Termina:</span>
             <span class={`font-medium ${isEnding ? 'text-error-600' : 'text-gray-700'}`}>
-              <span id={`countdown-${product?.id}`}></span>
+              {/* CORRECCIÓN: El ID del countdown debe ser único usando el ID de la subasta */}
+              <span id={`countdown-${auction.id}`}></span>
             </span>
           </div>
         )}
         
-        <div class="mt-4">
-          <a 
-            href={`/products/${product?.id}`}
+        <div class="pt-2">
+          {/* CORRECCIÓN: El enlace ahora va a /auctions/ y usa auction.id */}
+          <a
+            href={`/auctions/${auction.id}`}
             class="w-full bg-primary-500 text-white py-2 px-4 rounded-lg hover:bg-primary-600 transition-colors text-center block font-medium"
           >
             {bidsCount > 0 ? 'Pujar Ahora' : 'Hacer Primera Oferta'}
@@ -106,12 +103,12 @@ const currentPrice = auction?.current_price ?? 0;
         </div>
       </div>
     ) : (
-      <div class="mt-4">
-        <a 
-          href={`/products/${product?.id}`}
+      <div class="mt-auto pt-2">
+        <a
+          href={`/auctions/${auction.id}`}
           class="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-center block font-medium"
         >
-          Ver Producto
+          Ver Detalles
         </a>
       </div>
     )}
@@ -119,7 +116,8 @@ const currentPrice = auction?.current_price ?? 0;
 </div>
 
 {hasAuction && endTime && (
-  <script define:vars={{ productId: product?.id, endTime: auction?.end_time }}>
+  // CORRECCIÓN: Pasamos el ID de la subasta al script, no del producto.
+  <script define:vars={{ auctionId: auction.id, endTime: auction.end_time }}>
     function updateCountdown() {
       if (!endTime) return;
       
@@ -127,7 +125,8 @@ const currentPrice = auction?.current_price ?? 0;
       const now = new Date();
       const diff = endDate.getTime() - now.getTime();
       
-      const countdownEl = document.getElementById(`countdown-${productId}`);
+      // CORRECCIÓN: El selector del elemento usa el ID de la subasta.
+      const countdownEl = document.getElementById(`countdown-${auctionId}`);
       if (!countdownEl) return;
       
       if (diff <= 0) {
@@ -144,12 +143,19 @@ const currentPrice = auction?.current_price ?? 0;
       } else if (hours > 0) {
         countdownEl.textContent = `${hours}h ${minutes}m`;
       } else {
-        countdownEl.textContent = `${minutes}m`;
+        countdownEl.textContent = `${minutes}m restantes`;
       }
     }
     
     updateCountdown();
-    setInterval(updateCountdown, 60000); // Update every minute
+    const intervalId = setInterval(updateCountdown, 60000); // Actualiza cada minuto
+
+    // Limpia el intervalo cuando el elemento ya no está en la página
+    document.addEventListener('astro:page-load', () => {
+      if (!document.getElementById(`countdown-${auctionId}`)) {
+        clearInterval(intervalId);
+      }
+    });
   </script>
 )}
 

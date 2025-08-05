@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 // 1. IMPORTAMOS EL STORE DEL TOKEN Y LAS ACCIONES DE AUTH
 // Esto nos permite leer el token y llamar a la función de logout.
-import { $token, authActions } from '../stores/authStore.js'; 
+import { $token, authActions } from '../stores/authStore.js';
 
 // --- Variables de Entorno y Debugging (sin cambios) ---
 // Se asume que estas variables se resuelven correctamente en tu entorno de compilación (ej. Vite, Astro).
@@ -82,8 +82,8 @@ const request = async (endpoint, method = "GET", body = null, requiresAuth = fal
     // Si la respuesta es 401, el token es inválido o ha expirado.
     // Limpiamos la sesión en el frontend para evitar más errores.
     if (response.status === 401 && requiresAuth) {
-        console.warn('Token inválido o expirado detectado. Cerrando sesión localmente.');
-        authActions.logout(); // Usamos la acción de logout para limpiar el token y el usuario.
+      console.warn('Token inválido o expirado detectado. Cerrando sesión localmente.');
+      authActions.logout(); // Usamos la acción de logout para limpiar el token y el usuario.
     }
 
     const data = await response.json();
@@ -138,6 +138,11 @@ export const api = {
   },
   getMyAuctions() {
     return request('/auctions/my-auctions', 'GET', null, true); // Requiere auth
+  },
+
+  // --- AÑADE ESTA NUEVA FUNCIÓN ---
+  getUserBids() {
+    return request('/auctions/bids/my-bids', 'GET', null, true); // Ruta protegida
   },
 
   // --- Chat Service ---

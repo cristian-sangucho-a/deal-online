@@ -91,6 +91,11 @@ services:
       # --- URL ACTUALIZADA AL CONNECTION POOLER ---
       - DATABASE_URL=postgresql://postgres.bpggeirwhwnqqwbjvxob:sad435sdgdasd@aws-0-us-east-2.pooler.supabase.com:5432/postgres
       - JWT_SECRET=Ua5+XDbhGIB+FkFO70fPPu0cjPQ1UP5Iqcb4+z0qhYqkIuTs1p1uHWkv+oTDztsDwEanMkwa2WZhNYxgD7TwUA==
+      # --- INICIO DE LA CORRECIÓN ---
+      # Añade estas dos líneas para que el servicio pueda conectarse a RabbitMQ
+      - RABBITMQ_URL=amqps://sylvipgr:PxkPXofuAy3mafqSj3yT9zpIB-u128nc@albatross.rmq.cloudamqp.com/sylvipgr
+      - RABBITMQ_EMAIL_QUEUE=emails_queue
+      # --- FIN DE LA CORRECIÓN ---
     networks:
       - deal-network
 
