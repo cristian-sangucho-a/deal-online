@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 // 1. IMPORTAMOS EL STORE DEL TOKEN Y LAS ACCIONES DE AUTH
 // Esto nos permite leer el token y llamar a la función de logout.
-import { $token, authActions } from '../store/auth.js'; 
+import { $token, authActions } from '../stores/authStore.js'; 
 
 // --- Variables de Entorno y Debugging (sin cambios) ---
 // Se asume que estas variables se resuelven correctamente en tu entorno de compilación (ej. Vite, Astro).

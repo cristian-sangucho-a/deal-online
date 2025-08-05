@@ -1,6 +1,6 @@
 // auction.controller.ts
 
-import { Controller, Post, Body, Get, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, ParseIntPipe, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { AuctionService } from './auction.service';
 import { CreateAuctionDto } from './dto/create-auction.dto';
 import { PlaceBidDto } from './dto/place-bid.dto';
@@ -14,6 +14,9 @@ export class AuctionController {
   @UseGuards(AuthGuard)
   @Post()
   create(@Body() createAuctionDto: CreateAuctionDto, @CurrentUser() user: any) {
+    if (!user) {
+      throw new UnauthorizedException('No se encontró la información del usuario en la petición.');
+    }
     return this.auctionService.createAuction(createAuctionDto, user);
   }
 
@@ -22,16 +25,17 @@ export class AuctionController {
     return this.auctionService.findAllActive();
   }
 
-  // --- INICIO DE LA CORRECCIÓN ---
-  // Mover la ruta estática ANTES de la ruta con parámetro.
   @UseGuards(AuthGuard)
   @Get('my-auctions')
   findMyAuctions(@CurrentUser() user: any) {
-    // El decorador @CurrentUser extrae el payload del usuario del token
-    // (que fue inyectado por el AuthGuard).
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Añadimos una comprobación para asegurarnos de que el payload del usuario existe.
+    if (!user || !user.userId) {
+      throw new UnauthorizedException('No se encontró la información del usuario en la petición.');
+    }
+    // --- FIN DE LA CORRECCIÓN ---
     return this.auctionService.findByOwner(user.userId);
   }
-  // --- FIN DE LA CORRECCIÓN ---
 
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -45,8 +49,9 @@ export class AuctionController {
     @Body() placeBidDto: PlaceBidDto,
     @CurrentUser() user: any,
   ) {
+    if (!user) {
+      throw new UnauthorizedException('No se encontró la información del usuario en la petición.');
+    }
     return this.auctionService.placeBid(id, placeBidDto, user);
   }
-
-  // La ruta 'my-auctions' fue movida hacia arriba.
 }
