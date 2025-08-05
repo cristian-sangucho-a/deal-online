@@ -52,7 +52,12 @@ export const api = {
 
   // Authentication endpoints
   async register(userData) {
-    return this.request("/auth/register", "POST", userData);
+    return this.request("/auth/register", "POST", {
+      nombre: userData.nombre,
+      email: userData.email,
+      password: userData.password,
+      celular: userData.celular
+    });
   },
 
   async verifyRegistration(email, verificationCode) {
@@ -106,9 +111,8 @@ export const api = {
     if (params.search) queryParams.append("search", params.search);
     if (params.category) queryParams.append("category", params.category);
     if (params.status) queryParams.append("status", params.status);
-    const endpoint = `/products${
-      queryParams.toString() ? "?" + queryParams.toString() : ""
-    }`;
+    const endpoint = `/products${queryParams.toString() ? "?" + queryParams.toString() : ""
+      }`;
     try {
       const response = await this.request(endpoint, "GET");
       if (Array.isArray(response)) {
@@ -141,12 +145,28 @@ export const api = {
     return this.request(`/products/${id}`, "DELETE", null, token);
   },
 
+  //Auction endpoints
+  async createAuction(auctionData, token) {
+    return this.request("/auctions", "POST", {
+      productName: auctionData.productName,
+      productDescription: auctionData.productDescription,
+      imageUrl: auctionData.imageUrl,
+      startPrice: auctionData.startPrice,
+      endTime: auctionData.endTime
+    }, token);
+  },
+
+  async getAllAuctions() {
+    return this.request("/auctions");
+  },
+
   async getAuctionById(id) {
     return this.request(`/auctions/${id}`);
   },
-  async getAuctionById(id) {
-    return this.request(`/auctions/${id}`);
-  },
+
+  async placeBid(auctionId, amount, token) {
+  return this.request(`/auctions/${auctionId}/bids`, "POST", { amount }, token);
+},
 
   async closeAuction(auctionId, token) {
     return this.request(`/auctions/${auctionId}/close`, "POST", null, token);
@@ -196,42 +216,13 @@ export const api = {
   },
 
   // Chat endpoints
-  async sendChatMessage(
-    auctionId,
-    message,
-    isBid = false,
-    bidAmount = null,
-    token
-  ) {
-    return this.request(
-      "/chat",
-      "POST",
-      {
-        auction_id: auctionId,
-        message,
-        is_bid: isBid,
-        bid_amount: bidAmount,
-      },
-      token
-    );
-  },
+async getChatMessages(auctionId, token) {
+  return this.request(`/chat/${auctionId}/history`, "GET", null, token);
+},
 
-  async sendChatMessage(
-    token,
-    { auction_id, message, bid_amount = null, is_bid = false }
-  ) {
-    return this.request(
-      "/chat",
-      "POST",
-      {
-        auction_id,
-        message,
-        bid_amount,
-        is_bid,
-      },
-      token
-    );
-  },
+async sendChatMessage(auctionId, message, token) {
+  return this.request(`/chat/${auctionId}/message`, "POST", { message }, token);
+},
 
   // User endpoints
   async getUserProfile(token) {
@@ -241,4 +232,7 @@ export const api = {
   async updateUserProfile(userData, token) {
     return this.request("/users/profile", "PUT", userData, token);
   },
+
+
 };
+
