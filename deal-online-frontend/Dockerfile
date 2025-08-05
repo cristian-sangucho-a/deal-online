@@ -48,6 +48,13 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
 
+# These will be set by Cloud Run
+ENV PUBLIC_API_URL=""
+ENV PUBLIC_WS_URL=""
+ENV PUBLIC_SUPABASE_URL=""
+ENV PUBLIC_SUPABASE_ANON_KEY=""
+ENV DEBUG="false"
+
 # Expose port 3000 (Astro Node.js server default)
 EXPOSE 3000
 
