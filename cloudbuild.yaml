@@ -210,7 +210,7 @@ steps:
           --set-env-vars="AUTH_SERVICE_URL=$$AUTH_URL,AUCTION_SERVICE_URL=$$AUCTION_URL,CHAT_SERVICE_URL=$$CHAT_URL" \
           --set-secrets="JWT_SECRET=JWT_SECRET:latest"
     id: "deploy-api-gateway"
-    waitFor: ["push-api-gateway", "set-public-permissions"]
+    waitFor: ["push-api-gateway",  "set-public-permissions"]
 
 images:
   - "southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/api-gateway:$SHORT_SHA"
