@@ -1,9 +1,10 @@
 ---
-import Layout from "../layouts/Layout.astro";
-import Header from "../components/Header.astro";
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 ---
 
-<Layout title="Crear Producto - Deal Online">
+<Layout title="Crear Subasta - Deal Online">
     <Header />
 
     <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -11,57 +12,46 @@ import Header from "../components/Header.astro";
             Crear Nueva Subasta
         </h1>
 
-        <div id="error-message" class="hidden mb-4 p-4 bg-red-100 text-red-700 rounded">
-        </div>
+        <!-- Contenedores para mensajes de éxito y error -->
+        <div id="error-message" class="hidden mb-4 p-4 bg-red-100 text-red-700 rounded"></div>
+        <div id="success-message" class="hidden mb-4 p-4 bg-green-100 text-green-700 rounded"></div>
 
-        <div id="success-message" class="hidden mb-4 p-4 bg-green-100 text-green-700 rounded">
-        </div>
-
-        <form id="product-form" class="bg-white shadow rounded-lg p-6">
+        <form id="auction-form" class="bg-white shadow rounded-lg p-6">
+            <!-- Campo: Nombre del Producto -->
             <div class="mb-4">
-                <label for="name" class="block text-gray-700 font-semibold mb-2">
+                <label for="productName" class="block text-gray-700 font-semibold mb-2">
                     Nombre del Producto
                 </label>
                 <input
-                    id="name"
-                    name="name"
+                    id="productName"
+                    name="productName"
                     type="text"
                     class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                 />
             </div>
 
-            <div class="mb-6">
-                <label for="endTime" class="block text-gray-700 font-semibold mb-2">
-                    Fecha de Finalización de la Subasta
-                </label>
-                <input
-                    id="endTime"
-                    name="endTime"
-                    type="datetime-local"
-                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                />
-            </div>
-
+            <!-- Campo: Descripción -->
             <div class="mb-4">
-                <label for="description" class="block text-gray-700 font-semibold mb-2">
+                <label for="productDescription" class="block text-gray-700 font-semibold mb-2">
                     Descripción
                 </label>
                 <textarea
-                    id="description"
-                    name="description"
+                    id="productDescription"
+                    name="productDescription"
                     class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     rows="4"
-                    placeholder="Opcional"
+                    placeholder="Describe tu producto..."
+                    required
                 ></textarea>
             </div>
-            
+
+            <!-- Campo: Subida de Imagen -->
             <div class="mb-4">
                 <label for="image" class="block text-gray-700 font-semibold mb-2">
                     Imagen del Producto
                 </label>
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
+                <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
                     <input
                         id="image"
                         name="image"
@@ -90,16 +80,31 @@ import Header from "../components/Header.astro";
                 </div>
             </div>
 
-            <div class="mb-6">
-                <label for="startingPrice" class="block text-gray-700 font-semibold mb-2">
+            <!-- Campo: Precio Inicial -->
+            <div class="mb-4">
+                <label for="startPrice" class="block text-gray-700 font-semibold mb-2">
                     Precio Inicial (USD)
                 </label>
                 <input
-                    id="startingPrice"
-                    name="startingPrice"
+                    id="startPrice"
+                    name="startPrice"
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
+                />
+            </div>
+
+            <!-- Campo: Fecha de Finalización -->
+            <div class="mb-6">
+                <label for="endTime" class="block text-gray-700 font-semibold mb-2">
+                    Fecha de Finalización de la Subasta
+                </label>
+                <input
+                    id="endTime"
+                    name="endTime"
+                    type="datetime-local"
                     class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                 />
@@ -108,12 +113,13 @@ import Header from "../components/Header.astro";
             <button
                 id="submit-btn"
                 type="submit"
-                class="bg-primary-600 text-white font-semibold px-6 py-3 rounded hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                class="w-full bg-primary-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                Crear Producto
+                Crear Subasta
             </button>
         </form>
     </main>
+    <Footer />
 </Layout>
 
 <script>
@@ -121,19 +127,20 @@ import Header from "../components/Header.astro";
     import { api } from "../services/api.js";
     import { supabase } from "../services/supabaseClient.js";
 
-    const form = document.getElementById('product-form');
+    // --- Elementos del DOM ---
+    const form = document.getElementById('auction-form');
     const errorDiv = document.getElementById('error-message');
     const successDiv = document.getElementById('success-message');
     const submitBtn = document.getElementById('submit-btn');
-
-    // Image handling
     const imageInput = document.getElementById('image');
     const uploadBtn = document.getElementById('upload-btn');
     const imagePreview = document.getElementById('image-preview');
     const previewImg = document.getElementById('preview-img');
     const uploadPlaceholder = document.getElementById('upload-placeholder');
     const removeImageBtn = document.getElementById('remove-image');
+    const dropZone = document.getElementById('drop-zone');
 
+    // --- Funciones de UI ---
     function showError(message) {
         errorDiv.textContent = message;
         errorDiv.classList.remove('hidden');
@@ -151,211 +158,131 @@ import Header from "../components/Header.astro";
         successDiv.classList.add('hidden');
     }
 
-    // Handle file upload button click
-    uploadBtn.addEventListener('click', () => {
-        imageInput.click();
-    });
-
-    // Handle file selection
-    imageInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            // Validate file size (5MB max)
-            if (file.size > 5 * 1024 * 1024) {
-                showError('La imagen no puede ser mayor a 5MB');
-                return;
-            }
-
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                showError('Por favor selecciona un archivo de imagen válido');
-                return;
-            }
-
-            // Show preview
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                previewImg.src = e.target.result;
-                imagePreview.classList.remove('hidden');
-                uploadPlaceholder.classList.add('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // Handle remove image
+    // --- Lógica de Subida de Imagen ---
+    uploadBtn.addEventListener('click', () => imageInput.click());
     removeImageBtn.addEventListener('click', () => {
         imageInput.value = '';
         imagePreview.classList.add('hidden');
         uploadPlaceholder.classList.remove('hidden');
     });
 
-    // Handle drag and drop
-    const dropZone = document.querySelector('.border-dashed');
-    
+    imageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) handleFile(file);
+    });
+
+    // Lógica de Drag and Drop
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
     });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
     ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, highlight, false);
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('border-primary-500', 'bg-primary-50'), false);
     });
-
     ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, unhighlight, false);
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-primary-500', 'bg-primary-50'), false);
     });
+    dropZone.addEventListener('drop', (e) => {
+        const file = e.dataTransfer.files[0];
+        if (file) handleFile(file);
+    }, false);
 
-    function highlight() {
-        dropZone.classList.add('border-primary-500', 'bg-primary-50');
-    }
-
-    function unhighlight() {
-        dropZone.classList.remove('border-primary-500', 'bg-primary-50');
-    }
-
-    dropZone.addEventListener('drop', handleDrop, false);
-
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        
-        if (files.length > 0) {
-            imageInput.files = files;
-            // Trigger change event
-            const event = new Event('change', { bubbles: true });
-            imageInput.dispatchEvent(event);
+    function handleFile(file) {
+        if (file.size > 5 * 1024 * 1024) {
+            showError('La imagen no puede ser mayor a 5MB');
+            return;
         }
+        if (!file.type.startsWith('image/')) {
+            showError('Por favor selecciona un archivo de imagen válido');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            imagePreview.classList.remove('hidden');
+            uploadPlaceholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
     }
 
-    // Handle form submission
+    // --- Lógica de Envío del Formulario ---
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideMessages();
 
         const token = $token.get();
         if (!token) {
-            showError('Debes iniciar sesión para crear un producto.');
+            showError('Debes iniciar sesión para crear una subasta.');
+            // Opcional: redirigir al login
+            // window.location.href = '/login';
             return;
         }
 
         const formData = new FormData(form);
-        const name = formData.get('name').trim();
-        const startingPrice = formData.get('startingPrice');
+        const auctionData = {
+            productName: formData.get('productName').trim(),
+            productDescription: formData.get('productDescription').trim(),
+            startPrice: parseFloat(formData.get('startPrice')),
+            endTime: new Date(formData.get('endTime')).toISOString(), // Asegurar formato ISO
+            imageUrl: null
+        };
 
-        if (!name || !startingPrice) {
-            showError('Nombre y precio inicial son obligatorios.');
+        if (!auctionData.productName || !auctionData.startPrice || !auctionData.endTime) {
+            showError('Nombre, precio inicial y fecha de finalización son obligatorios.');
             return;
         }
 
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Creando producto...';
+        submitBtn.textContent = 'Procesando...';
 
         try {
-            let imageUrl = null;
-
-            // Check if user selected a file
-            const imageFile = formData.get('image');
-            if (imageFile && imageFile.size > 0) {
+            // 1. Subir la imagen a Supabase (si existe)
+            const imageFile = imageInput.files[0];
+            if (imageFile) {
                 submitBtn.textContent = 'Subiendo imagen...';
-                
-                // Set the JWT token for Supabase authentication
+
+                // Autenticar en Supabase con el token JWT de nuestro backend
                 await supabase.auth.setSession({
                     access_token: token,
-                    refresh_token: null
+                    refresh_token: token // Supabase necesita ambos, podemos usar el mismo
                 });
                 
-                // Generate unique filename
                 const fileExt = imageFile.name.split('.').pop();
                 const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
                 const filePath = `products/${fileName}`;
 
-                console.log('Uploading file to Supabase Storage...', {
-                    bucket: 'deal-online',
-                    filePath,
-                    fileSize: imageFile.size,
-                    fileType: imageFile.type
-                });
-
-                // Upload file to Supabase Storage
                 const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('deal-online')
-                    .upload(filePath, imageFile, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
+                    .from('deal-online') // Nombre de tu bucket
+                    .upload(filePath, imageFile);
 
-                console.log('Upload result:', { uploadData, uploadError });
+                if (uploadError) throw new Error(`Error al subir la imagen: ${uploadError.message}`);
 
-                if (uploadError) {
-                    console.error('Supabase storage error:', uploadError);
-                    throw new Error(`Error al subir la imagen: ${uploadError.message}`);
-                }
-
-                // Get public URL
                 const { data: urlData } = supabase.storage
                     .from('deal-online')
                     .getPublicUrl(filePath);
-
-                console.log('Public URL result:', urlData);
-
-                if (urlData?.publicUrl) {
-                    imageUrl = urlData.publicUrl;
-                } else {
-                    throw new Error('Error al obtener la URL pública de la imagen');
-                }
+                
+                auctionData.imageUrl = urlData.publicUrl;
             }
 
-            submitBtn.textContent = 'Guardando producto...';
-
-            // Create product data
-            const productData = {
-                name,
-                description: formData.get('description')?.trim() || '',
-                starting_price: parseFloat(startingPrice),
-                end_time: formData.get('endTime'),
-            };
-
-            // Add image URL if available
-            if (imageUrl) {
-                productData.image_url = imageUrl;
-            }
-
-            console.log('Sending product data:', productData);
-
-            // Create product via API
-            const response = await api.createProduct(productData, token);
-            const auction_id = response.auction.id;
-            console.log('Product created successfully:', response);
+            // 2. Crear la subasta a través de nuestro microservicio
+            submitBtn.textContent = 'Creando subasta...';
+            const response = await api.createAuction(auctionData, token);
             
-            showSuccess('Producto creado con éxito.');
+            showSuccess('¡Subasta creada con éxito! Serás redirigido...');
             
-            // Clear form
-            form.reset();
-            imagePreview.classList.add('hidden');
-            uploadPlaceholder.classList.remove('hidden');
-            
-            // Redirect after a short delay
+            // 3. Redirigir a la página de la subasta
             setTimeout(() => {
-                window.location.href = `/chat/${auction_id}`;
+                window.location.href = `/auctions/${response.id}`;
             }, 2000);
 
         } catch (err) {
-            console.error('Error creating product:', err);
-            showError(err.message || 'Error al crear el producto.');
+            console.error('Error al crear la subasta:', err);
+            showError(err.message || 'Ocurrió un error inesperado.');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Crear Producto';
+            submitBtn.textContent = 'Crear Subasta';
         }
     });
 </script>
-
-<style>
-    .border-dashed {
-        transition: all 0.3s ease;
-    }
-</style>

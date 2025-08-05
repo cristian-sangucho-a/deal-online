@@ -8,32 +8,21 @@ import Footer from "../components/Footer.astro";
     <Header />
 
     <div class="min-h-screen bg-gray-50">
-        <div
-            id="auth-check"
-            class="hidden min-h-screen flex items-center justify-center"
-        >
+        <!-- Pantalla de carga inicial mientras se verifica el token -->
+        <div id="auth-check" class="min-h-screen flex items-center justify-center">
             <div class="text-center">
-                <div
-                    class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"
-                >
-                </div>
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
                 <p class="text-gray-600">Verificando autenticación...</p>
             </div>
         </div>
 
-        <div
-            id="content"
-            class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
-        >
+        <!-- Contenido principal, oculto por defecto -->
+        <div id="content" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 class="text-3xl font-bold mb-6 text-gray-900">Mis Subastas</h1>
-
             <div id="auctions-list" class="space-y-4">
-                <!-- Aquí se listarán las subastas -->
+                <!-- Estado de carga de las subastas -->
                 <div class="text-center py-8 text-gray-500" id="loading">
-                    <div
-                        class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"
-                    >
-                    </div>
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
                     Cargando tus subastas...
                 </div>
             </div>
@@ -46,84 +35,77 @@ import Footer from "../components/Footer.astro";
     import { $user, $token } from "../stores/authStore.js";
     import { api } from "../services/api.js";
 
-    const authCheck = document.getElementById("auth-check");
-    const content = document.getElementById("content");
-    const auctionsList = document.getElementById("auctions-list");
-    const loading = document.getElementById("loading");
+    const authCheckDiv = document.getElementById("auth-check");
+    const contentDiv = document.getElementById("content");
+    const auctionsListDiv = document.getElementById("auctions-list");
 
-    async function checkAuthentication() {
-        const token = $token.get();
-        const user = $user.get();
-
-        if (!token || !user) {
-            if (authCheck) authCheck.classList.remove("hidden");
-            if (content) content.classList.add("hidden");
-
-            setTimeout(() => {
-                window.location.href =
-                    "/login?redirect=" +
-                    encodeURIComponent(window.location.pathname);
-            }, 1000);
-            return false;
+    // Función para renderizar las subastas en el HTML
+    function renderAuctions(auctions) {
+        if (!auctions || auctions.length === 0) {
+            auctionsListDiv.innerHTML = `
+                <div class="text-center py-12 bg-white rounded-lg shadow">
+                    <h2 class="text-xl font-semibold text-gray-700">No has creado ninguna subasta.</h2>
+                    <p class="text-gray-500 mt-2 mb-4">¡Anímate a vender tu primer producto!</p>
+                    <a href="/create-auction" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600">Crear mi primera subasta</a>
+                </div>
+            `;
+            return;
         }
 
-        if (authCheck) authCheck.classList.add("hidden");
-        if (content) content.classList.remove("hidden");
-
-        return true;
+        auctionsListDiv.innerHTML = auctions.map(auction => `
+            <div class="bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <img src="${auction.product?.image_url || 'https://placehold.co/100x100'}" alt="${auction.product?.name}" class="w-20 h-20 object-cover rounded-md hidden sm:block">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">${auction.product?.name || "Producto sin nombre"}</h2>
+                        <p class="text-sm text-gray-600">Estado: <span class="font-medium capitalize text-primary-700">${auction.status}</span></p>
+                        <p class="text-sm text-gray-600">Precio actual: <span class="font-bold">$${parseFloat(auction.current_price).toLocaleString()}</span></p>
+                        <p class="text-sm text-gray-500 mt-1">Finaliza: ${new Date(auction.end_time).toLocaleString()}</p>
+                    </div>
+                </div>
+                <a href="/auctions/${auction.id}" class="text-primary-600 hover:text-primary-500 font-semibold mt-4 sm:mt-0">
+                    Ver detalles →
+                </a>
+            </div>
+        `).join("");
     }
 
-    async function loadMyAuctions() {
-        try {
-            const token = $token.get();
-            if (!token) return;
-
-            const auctions = await api.getUserAuctions(token);
-
-            if (!auctions || auctions.length === 0) {
-                auctionsList.innerHTML = `
-          <p class="text-center text-gray-500 py-12">No tienes subastas activas o publicadas.</p>
+    function renderError() {
+        auctionsListDiv.innerHTML = `
+            <p class="text-center text-red-500 py-12">Error al cargar tus subastas. Por favor, intenta nuevamente más tarde.</p>
         `;
+    }
+
+    // Lógica principal que se ejecuta al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+        // Usamos un 'unsubscribe' para limpiar el listener si el componente se destruye
+        const unsubscribe = $token.subscribe(async (token) => {
+            if (token === undefined) {
+                // El store todavía está cargando desde localStorage, esperamos.
                 return;
             }
 
-            // Render auctions
-            auctionsList.innerHTML = auctions
-                .map(
-                    (auction) => `
-        <div class="bg-white rounded-lg shadow p-6 flex justify-between items-center">
-          <div>
-            <h2 class="text-xl font-semibold text-gray-900">${auction.Product?.name || "Producto sin nombre"}</h2>
-            <p class="text-sm text-gray-600">Estado: <span class="font-medium">${auction.status}</span></p>
-            <p class="text-sm text-gray-600">Precio inicial: $${auction.start_price.toLocaleString()}</p>
-            <p class="text-sm text-gray-600">Fecha de inicio: ${new Date(auction.start_date).toLocaleDateString()}</p>
-            <p class="text-sm text-gray-600">Fecha de cierre: ${new Date(auction.end_date).toLocaleDateString()}</p>
-          </div>
-          <a href="/auctions/${auction.id}" class="text-primary-600 hover:text-primary-500 font-semibold">Ver detalles →</a>
-        </div>
-      `,
-                )
-                .join("");
-        } catch (error) {
-            console.error("Error cargando subastas:", error);
-            auctionsList.innerHTML = `
-        <p class="text-center text-red-500 py-12">Error al cargar tus subastas. Intenta nuevamente más tarde.</p>
-      `;
-        }
-    }
+            if (!token) {
+                // Si no hay token, redirigimos al login
+                window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+                return;
+            }
 
-    async function init() {
-        const authenticated = await checkAuthentication();
-        if (authenticated) {
-            await loadMyAuctions();
-        }
-    }
+            // Si hay token, mostramos el contenido y cargamos los datos
+            authCheckDiv.classList.add("hidden");
+            contentDiv.classList.remove("hidden");
 
-    $token.subscribe(async (token) => {
-        if (token) {
-            await init();
-        }
+            try {
+                const myAuctions = await api.getMyAuctions(token);
+                renderAuctions(myAuctions);
+            } catch (error) {
+                console.error("Error cargando mis subastas:", error);
+                renderError();
+            }
+        });
+
+        // Opcional: Limpiar la suscripción si la página se va
+        // (útil en frameworks de SPA, pero bueno tenerlo)
+        window.addEventListener('beforeunload', unsubscribe);
     });
-
-    init();
 </script>

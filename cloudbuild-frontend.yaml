@@ -32,6 +32,7 @@ steps:
 
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: "bash"
+    entrypoint: "bash"
     args:
       - "-c"
       - |
@@ -50,6 +51,7 @@ steps:
           --set-secrets="PUBLIC_SUPABASE_URL=SUPABASE_URL:latest,PUBLIC_SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest"
     id: "deploy-frontend"
     waitFor: ["push-frontend"]
+    secretEnv: ["SUPABASE_URL", "SUPABASE_ANON_KEY"]
     secretEnv: ["SUPABASE_URL", "SUPABASE_ANON_KEY"]
 
   # ================================================================
