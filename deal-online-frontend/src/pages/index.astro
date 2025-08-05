@@ -10,12 +10,29 @@ let activeAuctions = [];
 let apiAvailable = true;
 
 try {
-  const  auctionsResponse = await Promise.all([
-    api.getActiveAuctions(1, 6)
-  ]);
+  // Obtener subastas activas que incluyen los productos
+  const auctionsResponse = await api.getActiveAuctions(1, 6);
 
-  featuredProducts = auctionsResponse.auctions.products || [];
-  activeAuctions = auctionsResponse.auctions || [];
+  // Extraer productos de las subastas para la sección de productos destacados
+  if (auctionsResponse.auctions && Array.isArray(auctionsResponse.auctions)) {
+    featuredProducts = auctionsResponse.auctions
+      .filter(auction => auction.product) // Solo subastas con producto
+      .map(auction => auction.product)
+      .slice(0, 4); // Limitar a 4 productos destacados
+    
+    activeAuctions = auctionsResponse.auctions;
+  } else if (Array.isArray(auctionsResponse)) {
+    // Compatibilidad si retorna directamente un array
+    featuredProducts = auctionsResponse
+      .filter(auction => auction.product)
+      .map(auction => auction.product)
+      .slice(0, 4);
+    
+    activeAuctions = auctionsResponse;
+  } else {
+    featuredProducts = [];
+    activeAuctions = [];
+  }
 } catch (error) {
   console.error('Error loading homepage data:', error);
   apiAvailable = false;

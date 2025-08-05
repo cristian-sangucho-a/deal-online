@@ -1,6 +1,6 @@
 const API_BASE_URL =
-  import.meta.env.PUBLIC_API_URL || "http://localhost:3500/api";
-const WS_BASE_URL = import.meta.env.PUBLIC_WS_URL || "ws://localhost:3501";
+  import.meta.env.PUBLIC_API_URL || "http://localhost:3050/api";
+const WS_BASE_URL = import.meta.env.PUBLIC_WS_URL || "ws://localhost:3051";
 
 // Debug: mostrar la URL base que se está usando
 console.log(`🔧 API_BASE_URL configurada: ${API_BASE_URL}`);
@@ -115,7 +115,7 @@ export const api = {
     }
   },
 
-  // Authentication endpoints
+  // Authentication endpoints (auth-service)
   async register(userData) {
     return this.request("/auth/register", "POST", {
       nombre: userData.nombre,
@@ -126,10 +126,15 @@ export const api = {
   },
 
   async verifyRegistration(email, verificationCode) {
-    return this.request("/auth/verify", "POST", { email, verificationCode });
+    return this.request("/auth/verify", "POST", {
+      email,
+      code: verificationCode, // Cambiado de 'verificationCode' a 'code'
+    });
   },
 
   async resendVerificationCode(email) {
+    // Nota: Este endpoint no está documentado en los nuevos microservicios
+    // Puede que necesites implementarlo o usar un método alternativo
     return this.request("/auth/resend-verification", "POST", { email });
   },
 
@@ -138,18 +143,22 @@ export const api = {
   },
 
   async refreshToken(token) {
+    // Nota: Este endpoint no está documentado en los nuevos microservicios
     return this.request("/auth/refresh-token", "POST", { token });
   },
 
   async logout(token) {
+    // Nota: Este endpoint no está documentado en los nuevos microservicios
     return this.request("/auth/logout", "POST", null, token);
   },
 
   async requestPasswordReset(email) {
+    // Nota: Este endpoint no está documentado en los nuevos microservicios
     return this.request("/auth/request-password-reset", "POST", { email });
   },
 
   async verifyResetCode(email, verificationCode) {
+    // Nota: Este endpoint no está documentado en los nuevos microservicios
     return this.request("/auth/verify-reset-code", "POST", {
       email,
       verificationCode,
@@ -157,6 +166,7 @@ export const api = {
   },
 
   async resetPassword(email, verificationCode, newPassword) {
+    // Nota: Este endpoint no está documentado en los nuevos microservicios
     return this.request("/auth/reset-password", "POST", {
       email,
       verificationCode,
@@ -169,26 +179,25 @@ export const api = {
     return this.request("/product", "POST", productData, token);
   },
 
+  // Product endpoints - Ahora obtenidos desde las subastas
   async getAllProducts(params = {}) {
-    const queryParams = new URLSearchParams();
-    if (params.page) queryParams.append("page", params.page);
-    if (params.limit) queryParams.append("limit", params.limit);
-    if (params.search) queryParams.append("search", params.search);
-    if (params.category) queryParams.append("category", params.category);
-    if (params.status) queryParams.append("status", params.status);
-    const endpoint = `/products${
-      queryParams.toString() ? "?" + queryParams.toString() : ""
-    }`;
+    // En los microservicios, los productos están asociados a las subastas
+    // Usamos el endpoint de subastas y extraemos los productos
     try {
-      const response = await this.request(endpoint, "GET");
-      if (Array.isArray(response)) {
-        return {
-          products: response,
-          total: response.length,
-          page: params.page || 1,
-        };
-      }
-      return response;
+      const auctions = await this.getAllAuctions();
+      const products = auctions.map((auction) => ({
+        ...auction.product,
+        auction_id: auction.id,
+        current_price: auction.current_price,
+        start_price: auction.start_price,
+        end_time: auction.end_time,
+      }));
+
+      return {
+        products: products,
+        total: products.length,
+        page: params.page || 1,
+      };
     } catch (error) {
       console.error("❌ Error en API /products:", {
         message: error.message,
@@ -200,18 +209,14 @@ export const api = {
   },
 
   async getProductById(id) {
-    return this.request(`/products/${id}`);
+    // Los productos ahora se obtienen a través de las subastas
+    return this.request(`/auctions/${id}`);
   },
 
-  async updateProduct(id, productData, token) {
-    return this.request(`/products/${id}`, "PUT", productData, token);
-  },
+  // Métodos de productos individuales ya no están disponibles en microservicios
+  // Los productos se manejan a través de las subastas
 
-  async deleteProduct(id, token) {
-    return this.request(`/products/${id}`, "DELETE", null, token);
-  },
-
-  //Auction endpoints
+  // Auction endpoints (auction-service)
   async createAuction(auctionData, token) {
     return this.request(
       "/auctions",
@@ -245,23 +250,27 @@ export const api = {
   },
 
   async closeAuction(auctionId, token) {
+    // Nota: Este endpoint no está documentado en los nuevos microservicios
     return this.request(`/auctions/${auctionId}/close`, "POST", null, token);
   },
 
   async getActiveAuctions(page = 1, limit = 12) {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-    });
+    // Simplificado - el endpoint /auctions ya retorna solo las activas
     try {
-      // Primero intentar el endpoint de subastas activas
-      return await this.request(`/auctions/active?${params.toString()}`);
+      const auctions = await this.getAllAuctions();
+      // Aplicar paginación del lado del cliente si es necesario
+      const startIndex = (page - 1) * limit;
+      const paginatedAuctions = auctions.slice(startIndex, startIndex + limit);
+
+      return {
+        auctions: paginatedAuctions,
+        total: auctions.length,
+        page: page,
+        limit: limit,
+      };
     } catch (error) {
-      console.log(
-        `⚠️ Endpoint /auctions/active falló, intentando /auctions...`
-      );
-      // Si falla, intentar con el endpoint genérico de subastas
-      return await this.request(`/auctions?${params.toString()}`);
+      console.log(`⚠️ Error obteniendo subastas activas:`, error);
+      throw error;
     }
   },
 
@@ -300,28 +309,20 @@ export const api = {
     return this.request(`/bids/auction/${auctionId}`);
   },
 
-  // Chat endpoints
+  // Chat endpoints (chat-service)
   async getChatMessages(auctionId, token) {
-    return this.request(`/chat/${auctionId}`, "GET", null, token);
+    // Actualizado para usar el nuevo endpoint de microservicios
+    return this.request(`/chat/${auctionId}/history`, "GET", null, token);
   },
 
-  async sendChatMessage(
-    auctionId,
-    message,
-    isBid = false,
-    bidAmount = null,
-    token
-  ) {
-    return this.request(
-      "/chat",
-      "POST",
-      {
-        auction_id: auctionId,
-        message,
-        is_bid: isBid,
-        bid_amount: bidAmount,
-      },
-      token
+  async sendChatMessage(auctionId, message, token) {
+    // Simplificado - el chat en tiempo real se maneja por WebSocket
+    // Este endpoint puede no estar disponible, usar WebSocket en su lugar
+    console.log(`⚠️ Chat en tiempo real debe usarse via WebSocket`);
+    throw new ApiError(
+      "Chat en tiempo real debe usarse via WebSocket",
+      501,
+      null
     );
   },
 
