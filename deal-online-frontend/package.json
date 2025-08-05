@@ -10,6 +10,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/node": "^9.3.3",
     "@astrojs/tailwind": "^5.1.2",
     "@nanostores/persistent": "^0.10.1",
     "@supabase/supabase-js": "^2.50.0",

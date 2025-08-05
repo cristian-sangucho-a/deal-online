@@ -31,17 +31,25 @@ ENV DEBUG=$DEBUG
 # Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Production stage - Run the Node.js server
+FROM node:18-alpine AS runtime
 
-# Copy built files to nginx
-COPY --from=builder /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy custom nginx config if needed
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy built application from builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
 
-# Expose port 80
-EXPOSE 80
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Set production environment
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=3000
+
+# Expose port 3000 (Astro Node.js server default)
+EXPOSE 3000
+
+# Start the Astro Node.js server
+CMD ["node", "./dist/server/entry.mjs"]
