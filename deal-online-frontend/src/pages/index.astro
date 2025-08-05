@@ -10,12 +10,11 @@ let activeAuctions = [];
 let apiAvailable = true;
 
 try {
-  const [productsResponse, auctionsResponse] = await Promise.all([
-    api.getAllProducts(1, 8),
+  const  auctionsResponse = await Promise.all([
     api.getActiveAuctions(1, 6)
   ]);
-  
-  featuredProducts = productsResponse.products || [];
+
+  featuredProducts = auctionsResponse.auctions.products || [];
   activeAuctions = auctionsResponse.auctions || [];
 } catch (error) {
   console.error('Error loading homepage data:', error);

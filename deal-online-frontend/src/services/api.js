@@ -2,6 +2,13 @@ const API_BASE_URL =
   import.meta.env.PUBLIC_API_URL || "http://localhost:3500/api";
 const WS_BASE_URL = import.meta.env.PUBLIC_WS_URL || "ws://localhost:3501";
 
+// Debug: mostrar la URL base que se está usando
+console.log(`🔧 API_BASE_URL configurada: ${API_BASE_URL}`);
+console.log(`🔧 Variables de entorno:`, {
+  PUBLIC_API_URL: import.meta.env.PUBLIC_API_URL,
+  PUBLIC_WS_URL: import.meta.env.PUBLIC_WS_URL,
+});
+
 export class ApiError extends Error {
   constructor(message, status, data) {
     super(message);
@@ -12,6 +19,13 @@ export class ApiError extends Error {
 
 export const api = {
   async request(endpoint, method = "GET", body = null, token = null) {
+    const fullUrl = `${API_BASE_URL}${endpoint}`;
+    console.log(`🌐 API Request: ${method} ${fullUrl}`);
+    console.log(`🔧 Headers que se enviarán:`, {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    });
+
     const headers = {
       "Content-Type": "application/json",
     };
@@ -26,14 +40,44 @@ export const api = {
     };
 
     if (body) {
+      console.log(`📦 Request body:`, body);
       options.body = JSON.stringify(body);
     }
 
+    console.log(`📋 Opciones completas de fetch:`, {
+      url: fullUrl,
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : null,
+    });
+
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-      const data = await response.json();
+      console.log(`⏱️ Iniciando fetch request...`);
+      const response = await fetch(fullUrl, options);
+
+      console.log(`📥 Respuesta recibida:`, {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries()),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+        console.log(`📄 Datos de respuesta parseados:`, data);
+      } catch (jsonError) {
+        console.log(`❌ Error al parsear JSON:`, jsonError);
+        console.log(`📄 Respuesta raw:`, await response.text());
+        throw new ApiError(
+          "Error al procesar respuesta del servidor",
+          response.status,
+          null
+        );
+      }
 
       if (!response.ok) {
+        console.log(`❌ API Error: ${response.status} - ${fullUrl}`, data);
         throw new ApiError(
           data.message || "Error en la solicitud",
           response.status,
@@ -41,11 +85,32 @@ export const api = {
         );
       }
 
+      console.log(`✅ API Success: ${response.status} - ${fullUrl}`, data);
       return data;
     } catch (error) {
+      console.log(`🔍 Análisis detallado del error:`, {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause,
+        isApiError: error instanceof ApiError,
+      });
+
       if (error instanceof ApiError) {
+        console.log(`❌ Error en API ${endpoint}:`, error);
         throw error;
       }
+
+      // Análisis específico de errores de conexión
+      if (error.name === "TypeError" && error.message.includes("fetch")) {
+        console.log(`🚫 Error de fetch detectado. Posibles causas:`);
+        console.log(`   - Servidor no disponible en: ${fullUrl}`);
+        console.log(`   - Problemas de CORS`);
+        console.log(`   - Red no disponible`);
+        console.log(`   - SSL/TLS issues`);
+      }
+
+      console.log(`❌ Error de conexión en ${fullUrl}:`, error);
       throw new ApiError("Error de conexión", 0, null);
     }
   },
@@ -56,7 +121,7 @@ export const api = {
       nombre: userData.nombre,
       email: userData.email,
       password: userData.password,
-      celular: userData.celular
+      celular: userData.celular,
     });
   },
 
@@ -111,8 +176,9 @@ export const api = {
     if (params.search) queryParams.append("search", params.search);
     if (params.category) queryParams.append("category", params.category);
     if (params.status) queryParams.append("status", params.status);
-    const endpoint = `/products${queryParams.toString() ? "?" + queryParams.toString() : ""
-      }`;
+    const endpoint = `/products${
+      queryParams.toString() ? "?" + queryParams.toString() : ""
+    }`;
     try {
       const response = await this.request(endpoint, "GET");
       if (Array.isArray(response)) {
@@ -147,13 +213,18 @@ export const api = {
 
   //Auction endpoints
   async createAuction(auctionData, token) {
-    return this.request("/auctions", "POST", {
-      productName: auctionData.productName,
-      productDescription: auctionData.productDescription,
-      imageUrl: auctionData.imageUrl,
-      startPrice: auctionData.startPrice,
-      endTime: auctionData.endTime
-    }, token);
+    return this.request(
+      "/auctions",
+      "POST",
+      {
+        productName: auctionData.productName,
+        productDescription: auctionData.productDescription,
+        imageUrl: auctionData.imageUrl,
+        startPrice: auctionData.startPrice,
+        endTime: auctionData.endTime,
+      },
+      token
+    );
   },
 
   async getAllAuctions() {
@@ -165,8 +236,13 @@ export const api = {
   },
 
   async placeBid(auctionId, amount, token) {
-  return this.request(`/auctions/${auctionId}/bids`, "POST", { amount }, token);
-},
+    return this.request(
+      `/auctions/${auctionId}/bids`,
+      "POST",
+      { amount },
+      token
+    );
+  },
 
   async closeAuction(auctionId, token) {
     return this.request(`/auctions/${auctionId}/close`, "POST", null, token);
@@ -177,7 +253,16 @@ export const api = {
       page: page.toString(),
       limit: limit.toString(),
     });
-    return this.request(`/auctions/active?${params.toString()}`);
+    try {
+      // Primero intentar el endpoint de subastas activas
+      return await this.request(`/auctions/active?${params.toString()}`);
+    } catch (error) {
+      console.log(
+        `⚠️ Endpoint /auctions/active falló, intentando /auctions...`
+      );
+      // Si falla, intentar con el endpoint genérico de subastas
+      return await this.request(`/auctions?${params.toString()}`);
+    }
   },
 
   // User data endpoints - NUEVOS MÉTODOS
@@ -216,17 +301,28 @@ export const api = {
   },
 
   // Chat endpoints
- async getChatMessages(auctionId, token) {
+  async getChatMessages(auctionId, token) {
     return this.request(`/chat/${auctionId}`, "GET", null, token);
   },
 
-  async sendChatMessage(auctionId, message, isBid = false, bidAmount = null, token) {
-    return this.request("/chat", "POST", {
-      auction_id: auctionId,
-      message,
-      is_bid: isBid,
-      bid_amount: bidAmount
-    }, token);
+  async sendChatMessage(
+    auctionId,
+    message,
+    isBid = false,
+    bidAmount = null,
+    token
+  ) {
+    return this.request(
+      "/chat",
+      "POST",
+      {
+        auction_id: auctionId,
+        message,
+        is_bid: isBid,
+        bid_amount: bidAmount,
+      },
+      token
+    );
   },
 
   // User endpoints
@@ -237,7 +333,4 @@ export const api = {
   async updateUserProfile(userData, token) {
     return this.request("/users/profile", "PUT", userData, token);
   },
-
-
 };
-
