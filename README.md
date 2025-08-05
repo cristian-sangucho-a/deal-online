@@ -43,10 +43,10 @@ La arquitectura de microservicios descompone una aplicación en un conjunto de s
 
 ### Explicación de Componentes y Tecnología Utilizada
 
-La arquitectura "Deal Online" se basa en los siguientes componentes principales y tecnologías: 
+La arquitectura "Deal Online" se basa en los siguientes componentes principales y tecnologías:
 
 #### API Gateway
-- Es el orquestador principal y el punto de entrada para todas las peticiones externas. Redirige las solicitudes a los microservicios apropiados y maneja la autenticación y la seguridad. 
+- Es el orquestador principal y el punto de entrada para todas las peticiones externas. Redirige las solicitudes a los microservicios apropiados y maneja la autenticación y la seguridad.
 - **Tecnología:** Node.js con NestJS.
 - **Puerto de Acceso:** http://localhost:3050
 
@@ -91,27 +91,61 @@ La evolución de un **monolito** hacia una **arquitectura de microservicios** en
    - Los módulos de autenticación, subastas, chat y notificaciones estaban acoplados.
    - Esto dificultaba la escalabilidad y el mantenimiento.
 
-2. **Identificación de Dominios**  
+2. **Identificación de Dominios**
    - Se analizaron las funcionalidades principales para separarlas en servicios:
      - **AuthService**: gestión de usuarios y autenticación con JWT.
      - **AuctionService**: control de subastas y pujas.
      - **ChatService**: mensajería en tiempo real.
      - **EmailService**: envío de notificaciones vía SMTP.
 
-3. **Separación en Microservicios**  
+3. **Separación en Microservicios**
    - Cada dominio se convirtió en un servicio independiente.
    - Se implementó un **API Gateway** (Express.js) para centralizar las peticiones.
-   - Se añadió **Socket.IO** para la comunicación en tiempo real en subastas y chat.
+   - Se añadió **Socket.IO** for la comunicación en tiempo real en subastas y chat.
 
-4. **Seguridad y Comunicación**  
+4. **Seguridad y Comunicación**
    - Se implementó un middleware para **validación de JWT** en cada microservicio.
    - Los servicios se comunican entre sí mediante REST y WebSocket, reduciendo el acoplamiento.
 
-5. **Base de Datos y Notificaciones**  
+5. **Base de Datos y Notificaciones**
    - Los microservicios acceden a **PostgreSQL** con sus propias consultas.
    - El **EmailService** se conecta a Gmail SMTP para notificaciones automáticas.
 
 Este cambio permitió que el sistema sea **más escalable, seguro y fácil de mantener**, eliminando la dependencia de un único bloque monolítico.
+
+### 5.4 Patrones de Microservicios Implementados
+
+#### 1. Patrón: API Gateway
+- **Descripción:** Un único servidor actúa como el punto de entrada principal para todas las peticiones de los clientes (como el frontend). Centraliza la autenticación y redirige las solicitudes al microservicio correspondiente.
+- **Implementación:**
+  - Microservicio dedicado `api-gateway` usando Nest.js.
+  - Expuesto en el puerto `http://localhost:3050`.
+  - Valida tokens JWT para rutas protegidas.
+  - Actúa como proxy inverso, redirigiendo peticiones HTTP (ej. `/api/auth/login`) y conexiones WebSocket (ej. `/chat/socket.io`) a los servicios internos (`auth-service`, `chat-service`, etc.) usando nombres de servicio de Docker.
+
+#### 2. Patrón: Database per Service
+- **Descripción:** Cada microservicio tiene su propia base de datos privada, garantizando bajo acoplamiento y aislamiento de datos.
+- **Implementación:**
+  - Definimos bases de datos PostgreSQL separadas en `docker-compose.yml`:
+    - `auth-db` para `auth-service`.
+    - `auction-db` para `auction-service`.
+    - `chat-db` para `chat-service`.
+  - Cada servicio se conecta exclusivamente a su base de datos designada, aislando datos de usuarios, subastas y chats.
+
+#### 3. Patrón: Service Discovery
+- **Descripción:** Permite a los servicios localizarse entre sí usando nombres lógicos en lugar de direcciones IP dinámicas, ideal para entornos como Docker.
+- **Implementación:**
+  - Implementado automáticamente mediante Docker Compose.
+  - La red `deal-network` permite resolver nombres de servicios (ej. `http://auth-service:3001`) a las IPs correctas de los contenedores.
+
+#### 4. Patrón: Comunicación Asíncrona con Message Broker
+- **Descripción:** Los servicios se comunican de forma asíncrona a través de un message broker, publicando y consumiendo mensajes sin esperar respuestas inmediatas.
+- **Implementación:**
+  - Usamos RabbitMQ como message broker.
+  - Ejemplo: Durante el registro de usuarios:
+    1. `auth-service` guarda el usuario y publica un evento `user_registered` en una cola de RabbitMQ.
+    2. `email-service` consume el evento y envía un correo de confirmación.
+  - Mejora la velocidad y resiliencia, permitiendo que el registro continúe incluso si el envío de correos falla.
 
 ---
 
@@ -133,13 +167,15 @@ El backend originalmente monolítico fue refactorizado siguiendo este enfoque:
 6. **Notificaciones Externas**:
    - El servicio de correo (EmailService) se conecta vía SMTP a Gmail para alertas y confirmaciones.
 
-
 ## 7. Conclusión
 
-La migración de la arquitectura monolítica hacia microservicios permitió:
+La migración de una arquitectura monolítica a microservicios en "Deal Online" permitió:
 
-- Aumentar la **escalabilidad** mediante servicios independientes.
-- Mejorar la **mantenibilidad** separando responsabilidades.
-- Integrar **comunicación en tiempo real** con Socket.IO.
-- Proteger rutas con **JWT**.
-- Incorporar servicios externos como **Gmail SMTP** para notificaciones.
+- **Escalabilidad mejorada** mediante servicios independientes que pueden escalarse individualmente.
+- **Mayor mantenibilidad** al separar responsabilidades y limitar el impacto de los cambios.
+- **Comunicación en tiempo real** eficiente con Socket.IO para subastas y chat.
+- **Seguridad robusta** con validación de JWT en rutas protegidas.
+- **Notificaciones externas** integradas mediante Gmail SMTP.
+- **Patrones de microservicios** implementados (API Gateway, Database per Service, Service Discovery, Comunicación Asíncrona) que aseguran un diseño robusto, desacoplado y escalable.
+
+Estos cambios han transformado el sistema en una solución más flexible, resiliente y preparada para futuros crecimientos.
