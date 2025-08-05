@@ -4,44 +4,39 @@ import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import ProductCard from "../components/ProductCard.astro";
-import { api } from "../services/api.js";
-
+import { api } from "../services/api.js"; // Importamos nuestro cliente de API corregido
 
 // Variables
-let products = [];
-let totalPages = 1;
+let auctions = []; // CORRECCIÓN: Ahora obtenemos subastas, no productos directamente.
 let error = null;
 
 try {
-  // Llama a la API del backend: /products?page=1&limit=12&search=...&category=...
-  const response = await api.getAllProducts({
-    page: 1,
-    limit: 12,
-})
-  products = response.products || [];
-  console.log(products);
-  totalPages = Math.ceil((response.total || 0) / 12);
+  // CORRECTO: Llamamos al endpoint de subastas, que es público y no necesita token.
+  // La información del producto vendrá dentro de cada objeto de subasta.
+  auctions = await api.getActiveAuctions();
+  console.log("Subastas recibidas:", auctions);
 } catch (err) {
+  console.error("Error al obtener las subastas:", err);
   error = err.message || 'Error al conectar con el servidor.';
 }
 ---
 
-<Layout title="Productos - Deal Online">
+<Layout title="Productos en Subasta - Deal Online">
   <Header />
   
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">Productos</h1>
-        <p class="mt-1 text-gray-600">Descubre productos únicos en nuestras subastas</p>
+        <h1 class="text-3xl font-bold text-gray-900">Subastas Activas</h1>
+        <p class="mt-1 text-gray-600">Descubre productos únicos y puja por ellos</p>
       </div>
 
       <div class="mt-4 md:mt-0">
-        <a href="/createProduct" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
+        <a href="/create-auction" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors">
           <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
           </svg>
-          Vender Producto
+          Crear Subasta
         </a>
       </div>
     </div>
@@ -49,24 +44,20 @@ try {
     <!-- Resultados -->
     {error ? (
       <div class="text-center py-24 min-h-[40vh] text-error-500">
-        <h2 class="text-xl font-semibold mb-2">Error al cargar productos</h2>
+        <h2 class="text-xl font-semibold mb-2">Error al cargar las subastas</h2>
         <p class="mb-4">{error}</p>
         <button onclick="window.location.reload()" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600">Reintentar</button>
       </div>
-    ) : products.length === 0 ? (
+    ) : auctions.length === 0 ? (
       <div class="text-center py-12 text-gray-600">
-        <h2 class="text-xl font-semibold mb-2">No se encontraron productos</h2>
-        <a href="/products" class="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600">Ver todos los productos</a>
-        
+        <h2 class="text-xl font-semibold mb-2">No hay subastas activas en este momento</h2>
+        <p>¡Vuelve más tarde o sé el primero en crear una!</p>
       </div>
     ) : (
-      <>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-          {products.map(product => <ProductCard product={product} />)}
-        </div>
-
-        
-      </>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+        {/* CORRECCIÓN: Mapeamos el array de 'auctions' y pasamos cada subasta al componente Card */}
+        {auctions.map(auction => <ProductCard auction={auction} />)}
+      </div>
     )}
   </div>
   <Footer />

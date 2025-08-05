@@ -7,7 +7,7 @@ import { AuthGuard } from '../common/guards/auth.guard';
 
 @Controller('auctions')
 export class AuctionController {
-  constructor(private readonly auctionService: AuctionService) {}
+  constructor(private readonly auctionService: AuctionService) { }
 
   @UseGuards(AuthGuard) // Protege esta ruta
   @Post()
@@ -34,4 +34,13 @@ export class AuctionController {
   ) {
     return this.auctionService.placeBid(id, placeBidDto, user);
   }
+
+  @UseGuards(AuthGuard)
+  @Get('my-auctions')
+  findMyAuctions(@CurrentUser() user: any) {
+    // El decorador @CurrentUser extrae el payload del usuario del token
+    // (que fue inyectado por el AuthGuard).
+    return this.auctionService.findByOwner(user.userId);
+  }
+
 }
