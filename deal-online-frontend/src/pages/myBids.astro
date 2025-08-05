@@ -4,35 +4,23 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 ---
 
-<Layout title="Mis Bids - Deal Online">
+<Layout title="Mis Pujas - Deal Online">
     <Header />
 
     <div class="min-h-screen bg-gray-50">
-        <div
-            id="auth-check"
-            class="hidden min-h-screen flex items-center justify-center"
-        >
+        <div id="auth-check" class="min-h-screen flex items-center justify-center">
             <div class="text-center">
-                <div
-                    class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"
-                >
-                </div>
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
                 <p class="text-gray-600">Verificando autenticación...</p>
             </div>
         </div>
 
-        <div
-            id="content"
-            class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
-        >
-            <h1 class="text-3xl font-bold mb-6 text-gray-900">Mis Puja</h1>
+        <div id="content" class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <h1 class="text-3xl font-bold mb-6 text-gray-900">Mis Pujas</h1>
 
             <div id="bids-list" class="space-y-4">
                 <div class="text-center py-8 text-gray-500" id="loading">
-                    <div
-                        class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"
-                    >
-                    </div>
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
                     Cargando tus pujas...
                 </div>
             </div>
@@ -48,80 +36,69 @@ import Footer from "../components/Footer.astro";
     const authCheck = document.getElementById("auth-check");
     const content = document.getElementById("content");
     const bidsList = document.getElementById("bids-list");
-    const loading = document.getElementById("loading");
-
+    
+    // Esta función es correcta, se encarga de proteger la ruta.
     async function checkAuthentication() {
         const token = $token.get();
         const user = $user.get();
 
         if (!token || !user) {
-            if (authCheck) authCheck.classList.remove("hidden");
-            if (content) content.classList.add("hidden");
-
+            authCheck.classList.remove("hidden");
+            content.classList.add("hidden");
             setTimeout(() => {
-                window.location.href =
-                    "/login?redirect=" +
-                    encodeURIComponent(window.location.pathname);
+                window.location.href = "/login?redirect=" + encodeURIComponent(window.location.pathname);
             }, 1000);
             return false;
         }
 
-        if (authCheck) authCheck.classList.add("hidden");
-        if (content) content.classList.remove("hidden");
-
+        authCheck.classList.add("hidden");
+        content.classList.remove("hidden");
         return true;
     }
 
     async function loadMyBids() {
         try {
-            const token = $token.get();
-            if (!token) return;
-
-            // Asume que la API tiene un método para obtener las pujas del usuario
-            const bids = await api.getUserBids(token);
+            // CORRECCIÓN 1: La llamada a la API ya no necesita el token como argumento.
+            // Nuestra función en `api.js` lo gestiona automáticamente.
+            const bids = await api.getUserBids();
 
             if (!bids || bids.length === 0) {
-                bidsList.innerHTML = `
-          <p class="text-center text-gray-500 py-12">No tienes pujas activas.</p>
-        `;
+                bidsList.innerHTML = `<p class="text-center text-gray-500 py-12">No has realizado ninguna puja todavía.</p>`;
                 return;
             }
 
+            // CORRECCIÓN 2: Se ajusta el acceso a las propiedades para que coincida con la respuesta de la API (camelCase).
+            // Por ejemplo: 'bid.auction.product.name' en lugar de 'bid.Auction.Product.name'.
             bidsList.innerHTML = bids
                 .map(
                     (bid) => `
-        <div class="bg-white rounded-lg shadow p-6 flex justify-between items-center">
-          <div>
-            <h2 class="text-xl font-semibold text-gray-900">${bid.Auction?.Product?.name || "Producto sin nombre"}</h2>
-            <p class="text-sm text-gray-600">Monto pujado: $${bid.amount.toLocaleString()}</p>
-            <p class="text-sm text-gray-600">Fecha de puja: ${new Date(bid.createdAt).toLocaleDateString()}</p>
-            <p class="text-sm text-gray-600">Estado de la subasta: <span class="font-medium">${bid.Auction?.status || "Desconocido"}</span></p>
-          </div>
-          <a href="/auctions/${bid.auctionId}" class="text-primary-600 hover:text-primary-500 font-semibold">Ver subasta →</a>
-        </div>
-      `,
+                        <div class="bg-white rounded-lg shadow p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-shadow hover:shadow-md">
+                          <div class="flex-grow">
+                            <p class="text-sm text-gray-500">Puja en:</p>
+                            <h2 class="text-xl font-semibold text-gray-900 mb-2">${bid.auction?.product?.name || "Producto sin nombre"}</h2>
+                            <p class="text-sm text-gray-600">Monto pujado: <span class="font-bold text-lg text-primary-600">$${parseFloat(bid.amount).toLocaleString()}</span></p>
+                            <p class="text-sm text-gray-500">Fecha de puja: ${new Date(bid.created_at).toLocaleString()}</p>
+                            <p class="text-sm text-gray-600">Estado de la subasta: <span class="font-medium capitalize">${bid.auction?.status || "Desconocido"}</span></p>
+                          </div>
+                          <a href="/auctions/${bid.auction?.id}" class="text-primary-600 hover:text-primary-500 font-semibold mt-4 sm:mt-0 flex-shrink-0">Ver subasta →</a>
+                        </div>
+                    `
                 )
                 .join("");
         } catch (error) {
             console.error("Error cargando pujas:", error);
-            bidsList.innerHTML = `
-        <p class="text-center text-red-500 py-12">Error al cargar tus pujas. Intenta nuevamente más tarde.</p>
-      `;
+            bidsList.innerHTML = `<p class="text-center text-red-500 py-12">Error al cargar tus pujas. Intenta nuevamente más tarde.</p>`;
         }
     }
 
-    async function init() {
-        const authenticated = await checkAuthentication();
-        if (authenticated) {
+    // Lógica de Inicialización (Robusta)
+    // Se ejecuta una vez que el HTML está listo.
+    document.addEventListener('DOMContentLoaded', async () => {
+        // El store de nanostores/persistent ya habrá cargado el token de localStorage.
+        const isAuthenticated = await checkAuthentication();
+        if (isAuthenticated) {
+            // Si el usuario está autenticado, cargamos sus pujas.
             await loadMyBids();
         }
-    }
-
-    $token.subscribe(async (token) => {
-        if (token) {
-            await init();
-        }
     });
-
-    init();
 </script>

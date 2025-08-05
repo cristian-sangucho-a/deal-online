@@ -64,7 +64,7 @@ import Footer from "../components/Footer.astro";
                     </div>
                 </div>
                 <a href="/auctions/${auction.id}" class="text-primary-600 hover:text-primary-500 font-semibold mt-4 sm:mt-0">
-                    Ver detalles →
+                  Ver detalles →
                 </a>
             </div>
         `).join("");
@@ -77,35 +77,27 @@ import Footer from "../components/Footer.astro";
     }
 
     // Lógica principal que se ejecuta al cargar la página
-    document.addEventListener('DOMContentLoaded', () => {
-        // Usamos un 'unsubscribe' para limpiar el listener si el componente se destruye
-        const unsubscribe = $token.subscribe(async (token) => {
-            if (token === undefined) {
-                // El store todavía está cargando desde localStorage, esperamos.
-                return;
-            }
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Esperamos a que el store de nanostores cargue el token desde localStorage
+        const token = $token.get();
 
-            if (!token) {
-                // Si no hay token, redirigimos al login
-                window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-                return;
-            }
+        if (!token) {
+            // Si no hay token, redirigimos al login
+            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+            return;
+        }
 
-            // Si hay token, mostramos el contenido y cargamos los datos
-            authCheckDiv.classList.add("hidden");
-            contentDiv.classList.remove("hidden");
+        // Si hay token, mostramos el contenido y cargamos los datos
+        authCheckDiv.classList.add("hidden");
+        contentDiv.classList.remove("hidden");
 
-            try {
-                const myAuctions = await api.getMyAuctions(token);
-                renderAuctions(myAuctions);
-            } catch (error) {
-                console.error("Error cargando mis subastas:", error);
-                renderError();
-            }
-        });
-
-        // Opcional: Limpiar la suscripción si la página se va
-        // (útil en frameworks de SPA, pero bueno tenerlo)
-        window.addEventListener('beforeunload', unsubscribe);
+        try {
+            // La llamada correcta, sin argumentos
+            const myAuctions = await api.getMyAuctions();
+            renderAuctions(myAuctions);
+        } catch (error) {
+            console.error("Error cargando mis subastas:", error);
+            renderError();
+        }
     });
 </script>

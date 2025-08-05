@@ -1,0 +1,202 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro"; // Añadido para consistencia
+import { api } from "../../services/api.js";
+
+// CORRECCIÓN: Ahora obtenemos las rutas estáticas desde las subastas activas.
+export async function getStaticPaths() {
+  try {
+    const auctions = await api.getActiveAuctions();
+
+    return auctions.map((auction) => ({
+      params: { id: auction.id.toString() },
+      props: { auction }, // Pasamos el objeto 'auction' completo como prop
+    }));
+  } catch (error) {
+    console.error("Error generating static paths for auctions:", error);
+    return [];
+  }
+}
+
+const { id } = Astro.params;
+// CORRECCIÓN: Recibimos una prop 'auction', no 'product'.
+const { auction: staticAuction } = Astro.props; 
+
+// CORRECCIÓN: Nuestras variables ahora se basan en 'auction'.
+let finalAuction = staticAuction;
+let error = null;
+
+// Si la página no fue pre-renderizada (ej. una subasta creada recientemente), la buscamos en el cliente.
+if (!finalAuction) {
+  try {
+    // CORRECCIÓN: Llamamos al endpoint correcto para obtener una subasta por su ID.
+    finalAuction = await api.getAuctionById(id);
+  } catch (err) {
+    error = err.message;
+  }
+}
+
+if (!finalAuction && !error) {
+  // Si no se encontró la subasta ni hubo un error, redirigimos a 404.
+  return Astro.redirect("/404");
+}
+---
+
+<Layout
+  title={finalAuction
+    ? `${finalAuction.product.name} - Deal Online`
+    : "Subasta no encontrada"}
+>
+  <Header />
+
+  {
+    error ? (
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Error al cargar la subasta</h1>
+        <p class="text-gray-600 mb-6">{error}</p>
+        <a href="/products" class="text-primary-600 hover:text-primary-500">
+          ← Volver a las subastas
+        </a>
+      </div>
+    ) : (
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <nav class="mb-8">
+          <ol class="flex items-center space-x-2 text-sm text-gray-500">
+            <li><a href="/" class="hover:text-gray-700">Inicio</a></li>
+            <li><span>→</span></li>
+            {/* CORRECCIÓN: El breadcrumb ahora apunta a la página de subastas */}
+            <li><a href="/products" class="hover:text-gray-700">Subastas</a></li>
+            <li><span>→</span></li>
+            {/* CORRECCIÓN: El nombre del producto se obtiene de finalAuction.product.name */}
+            <li class="text-gray-900">{finalAuction.product.name}</li>
+          </ol>
+        </nav>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Columna de la imagen del producto */}
+          <div class="space-y-4">
+            <div class="aspect-square rounded-lg overflow-hidden bg-gray-100 shadow-lg">
+              <img
+                src={finalAuction.product.image_url || "https://placehold.co/600x600"}
+                alt={finalAuction.product.name}
+                class="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Columna de información */}
+          <div class="space-y-6">
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900 mb-2">{finalAuction.product.name}</h1>
+              <p class="text-gray-600 text-lg leading-relaxed">{finalAuction.product.description}</p>
+            </div>
+            
+            {/* CORRECCIÓN: La sección de la subasta ya no necesita la condición finalAuction.auction, porque finalAuction *es* la subasta */}
+            <div id="auction-section" class="border-t pt-6">
+              <div class="bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-xl font-semibold text-gray-900">Subasta Activa</h3>
+                  <span class={`px-3 py-1 rounded-full text-sm font-medium ${finalAuction.status === "active" ? "bg-success-100 text-success-800" : "bg-gray-100 text-gray-800"}`}>
+                    {finalAuction.status === "active" ? "Activa" : "Finalizada"}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <p class="text-sm text-gray-600">Precio actual</p>
+                    <p class="text-2xl font-bold text-primary-600">
+                      ${parseFloat(finalAuction.current_price).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="text-sm text-gray-600">Tiempo restante</p>
+                    <p id="countdown" class="text-lg font-semibold text-gray-900"/>
+                  </div>
+                </div>
+
+                {finalAuction.status === "active" && (
+                  <div class="text-center">
+                    <a href={`/chat/${finalAuction.id}`} class="inline-block w-full bg-primary-500 text-white py-3 px-4 rounded-lg hover:bg-primary-600 transition-colors font-medium text-center">
+                      Hacer Oferta
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* CORRECCIÓN: El historial de ofertas ahora se accede directamente desde finalAuction.bids */}
+            {finalAuction.bids && finalAuction.bids.length > 0 && (
+              <div class="border-t pt-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Historial de Ofertas</h3>
+                <div class="space-y-3 max-h-64 overflow-y-auto">
+                  {finalAuction.bids.map((bid) => (
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg" key={bid.id}>
+                      {/* ... La estructura interna del historial de pujas parece correcta ... */}
+                      <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                          <span class="text-xs font-medium text-gray-700">
+                            {/* Asumimos que la API devuelve el 'bidder' con la puja */}
+                            {bid.bidder?.nombre?.charAt(0).toUpperCase() || "U"}
+                          </span>
+                        </div>
+                        <div>
+                          <p class="font-medium text-gray-900">{bid.bidder?.nombre || "Usuario"}</p>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <p class="font-bold text-primary-600">${parseFloat(bid.amount).toLocaleString()}</p>
+                        <p class="text-xs text-gray-500">{new Date(bid.created_at).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+  <Footer />
+</Layout>
+
+<script define:vars={{ finalAuction }}>
+  // CORRECCIÓN: Actualizamos el script para que use 'finalAuction' directamente.
+  function updateCountdown() {
+    if (!finalAuction || finalAuction.status !== 'active') return;
+
+    const endTime = new Date(finalAuction.end_time);
+    const now = new Date();
+    const diff = endTime.getTime() - now.getTime();
+
+    const countdownEl = document.getElementById("countdown");
+    if (!countdownEl) return;
+
+    if (diff <= 0) {
+      countdownEl.textContent = "Subasta finalizada";
+      countdownEl.className = "text-lg font-semibold text-error-600";
+      // Aquí podrías añadir lógica para actualizar el DOM y mostrar "Finalizada"
+      return;
+    }
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    countdownEl.textContent = timeString;
+    if (hours < 1) {
+      countdownEl.className = "text-lg font-semibold text-error-600 animate-pulse";
+    } else {
+      countdownEl.className = "text-lg font-semibold text-gray-900";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (finalAuction && finalAuction.status === "active") {
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+    }
+  });
+</script>
