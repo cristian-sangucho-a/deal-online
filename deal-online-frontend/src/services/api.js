@@ -216,13 +216,18 @@ export const api = {
   },
 
   // Chat endpoints
-async getChatMessages(auctionId, token) {
-  return this.request(`/chat/${auctionId}/history`, "GET", null, token);
-},
+ async getChatMessages(auctionId, token) {
+    return this.request(`/chat/${auctionId}`, "GET", null, token);
+  },
 
-async sendChatMessage(auctionId, message, token) {
-  return this.request(`/chat/${auctionId}/message`, "POST", { message }, token);
-},
+  async sendChatMessage(auctionId, message, isBid = false, bidAmount = null, token) {
+    return this.request("/chat", "POST", {
+      auction_id: auctionId,
+      message,
+      is_bid: isBid,
+      bid_amount: bidAmount
+    }, token);
+  },
 
   // User endpoints
   async getUserProfile(token) {
