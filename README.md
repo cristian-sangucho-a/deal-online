@@ -167,7 +167,45 @@ El backend originalmente monolítico fue refactorizado siguiendo este enfoque:
 6. **Notificaciones Externas**:
    - El servicio de correo (EmailService) se conecta vía SMTP a Gmail para alertas y confirmaciones.
 
-## 7. Conclusión
+## 7. Arquitectura Final del Proyecto
+
+```markdown
+📁 deal-online/
+├── 📁 .github/
+│   └── 📁 workflows/
+│       └── 📄 ci-cd.yml
+├── 📁 api-gateway/
+│   ├── 📁 src/
+│   │   ├── 📁 auth/
+│   │   │   ├── 📄 jwt-auth.guard.ts
+│   │   │   └── 📄 jwt.strategy.ts
+│   │   ├── 📄 app.module.ts
+│   │   └── 📄 main.ts
+│   ├── 📄 .env
+│   └── 📄 Dockerfile
+├── 📁 microservices/
+│   ├── 📁 auth-service/
+│   │   ├── 📁 src/
+│   │   ├── 📄 .env
+│   │   └── 📄 Dockerfile
+│   ├── 📁 auction-service/
+│   │   ├── 📁 src/
+│   │   ├── 📄 .env
+│   │   └── 📄 Dockerfile
+│   ├── 📁 chat-service/
+│   │   ├── 📁 src/
+│   │   ├── 📄 .env
+│   │   └── 📄 Dockerfile
+│   └── 📁 email-service/
+│       └── 📄 Dockerfile
+├── 📁 monitoring/
+│   ├── 📄 prometheus.yml
+│   ├── 📄 .env
+│   └── 📄 Dockerfile
+└── 📄 docker-compose.yml
+```
+
+## 8. Conclusión
 
 La migración de una arquitectura monolítica a microservicios en "Deal Online" permitió:
 
