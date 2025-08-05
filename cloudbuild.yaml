@@ -226,7 +226,7 @@ steps:
         echo "✅ Using WebSocket URL: $$WS_URL"
         docker build \
           -t southamerica-east1-docker.pkg.dev/$PROJECT_ID/deal-online-repo/frontend:$SHORT_SHA \
-          --build-arg PUBLIC_API_URL=$$API_GATEWAY_URL/api \
+          --build-arg PUBLIC_API_URL=$$API_GATEWAY_URL \
           --build-arg PUBLIC_WS_URL=$$WS_URL/chat/socket.io \
           --build-arg PUBLIC_SUPABASE_URL=$$SUPABASE_URL \
           --build-arg PUBLIC_SUPABASE_ANON_KEY=$$SUPABASE_ANON_KEY \
@@ -263,7 +263,7 @@ steps:
           --cpu=1 \
           --timeout=300 \
           --port=3000 \
-          --set-env-vars="PUBLIC_API_URL=$$API_GATEWAY_URL/api,PUBLIC_WS_URL=$$WS_URL/chat/socket.io,NODE_ENV=production,DEBUG=false" \
+          --set-env-vars="PUBLIC_API_URL=$$API_GATEWAY_URL,PUBLIC_WS_URL=$$WS_URL/chat/socket.io,NODE_ENV=production,DEBUG=false" \
           --set-secrets="PUBLIC_SUPABASE_URL=SUPABASE_URL:latest,PUBLIC_SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest"
     id: "deploy-frontend"
     waitFor: ["push-frontend"]
