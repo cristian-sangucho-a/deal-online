@@ -1,8 +1,15 @@
 import { io } from "socket.io-client";
+// 1. IMPORTAMOS EL STORE DEL TOKEN Y LAS ACCIONES DE AUTH
+// Esto nos permite leer el token y llamar a la función de logout.
+import { $token, authActions } from '../store/auth.js'; 
 
-// Debug: mostrar la URL base que se está usando
-console.log(`🔧 API_BASE_URL configurada: ${API_BASE_URL}`);
-console.log(`🔧 WS_BASE_URL configurada: ${WS_BASE_URL}`);
+// --- Variables de Entorno y Debugging (sin cambios) ---
+// Se asume que estas variables se resuelven correctamente en tu entorno de compilación (ej. Vite, Astro).
+const API_GATEWAY_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+const WS_GATEWAY_URL = import.meta.env.PUBLIC_WS_URL || 'http://localhost:3000';
+
+console.log(`🔧 API Gateway URL configurada: ${API_GATEWAY_URL}`);
+console.log(`🔧 WebSocket Gateway URL configurada: ${WS_GATEWAY_URL}`);
 console.log(`🔧 Variables de entorno import.meta.env:`, {
   PUBLIC_API_URL: import.meta.env.PUBLIC_API_URL,
   PUBLIC_WS_URL: import.meta.env.PUBLIC_WS_URL,
@@ -10,7 +17,6 @@ console.log(`🔧 Variables de entorno import.meta.env:`, {
   NODE_ENV: import.meta.env.NODE_ENV,
 });
 
-// También verificar process.env para depuración
 if (typeof process !== "undefined" && process.env) {
   console.log(`🔧 Variables de entorno process.env:`, {
     PUBLIC_API_URL: process.env.PUBLIC_API_URL,
@@ -20,6 +26,7 @@ if (typeof process !== "undefined" && process.env) {
   });
 }
 
+// --- Clase de Error Personalizada (sin cambios) ---
 export class ApiError extends Error {
   constructor(message, status, data) {
     super(message);
@@ -29,16 +36,33 @@ export class ApiError extends Error {
 }
 
 // ================================================================
-// Cliente de API (Peticiones HTTP)
+// Cliente de API (Peticiones HTTP) - REFACTORIZADO
 // ================================================================
-const request = async (endpoint, method = "GET", body = null, token = null) => {
+
+/**
+ * Función base para realizar peticiones a la API.
+ * @param {string} endpoint - El endpoint de la API (ej. '/auth/login').
+ * @param {string} method - El método HTTP (ej. 'GET', 'POST').
+ * @param {object|null} body - El cuerpo de la petición para POST, PUT, etc.
+ * @param {boolean} requiresAuth - Si es `true`, se adjuntará el token JWT a la petición.
+ */
+const request = async (endpoint, method = "GET", body = null, requiresAuth = false) => {
   const fullUrl = `${API_GATEWAY_URL}/api${endpoint}`;
 
   const headers = {
     "Content-Type": "application/json",
   };
 
-  if (token) {
+  // 2. LÓGICA CENTRALIZADA PARA AÑADIR EL TOKEN
+  // Si la petición requiere autenticación, obtenemos el token del store.
+  if (requiresAuth) {
+    const token = $token.get(); // Obtenemos el token actual de nanostores.
+    if (!token) {
+      // Evitamos una llamada a la API que sabemos que fallará.
+      const errorMessage = `Acceso no autorizado. La ruta ${endpoint} requiere iniciar sesión.`;
+      console.error(errorMessage);
+      throw new ApiError(errorMessage, 401, null);
+    }
     headers["Authorization"] = `Bearer ${token}`;
   }
 
@@ -53,6 +77,15 @@ const request = async (endpoint, method = "GET", body = null, token = null) => {
 
   try {
     const response = await fetch(fullUrl, options);
+
+    // 3. MEJORA: CIERRE DE SESIÓN AUTOMÁTICO
+    // Si la respuesta es 401, el token es inválido o ha expirado.
+    // Limpiamos la sesión en el frontend para evitar más errores.
+    if (response.status === 401 && requiresAuth) {
+        console.warn('Token inválido o expirado detectado. Cerrando sesión localmente.');
+        authActions.logout(); // Usamos la acción de logout para limpiar el token y el usuario.
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -68,59 +101,53 @@ const request = async (endpoint, method = "GET", body = null, token = null) => {
     if (error instanceof ApiError) {
       throw error;
     }
+    // Error genérico para problemas de red o si `response.json()` falla.
     throw new ApiError("Error de conexión con el servidor.", 0, null);
   }
 };
 
 // ================================================================
-// Endpoints Disponibles
+// Endpoints Disponibles - SIMPLIFICADOS
 // ================================================================
+// 4. MÉTODOS DE API LIMPIOS
+// Ya no es necesario pasar el token manualmente. Solo se indica si la ruta requiere autenticación.
 export const api = {
-  // --- Auth Service ---
+  // --- Auth Service (no requieren token) ---
   register(userData) {
-    return request("/auth/register", "POST", userData);
+    return request("/auth/register", "POST", userData, false);
   },
-
   verify(email, code) {
-    return request("/auth/verify", "POST", { email, code });
+    return request("/auth/verify", "POST", { email, code }, false);
   },
-
   login(email, password) {
-    return request("/auth/login", "POST", { email, password });
+    return request("/auth/login", "POST", { email, password }, false);
   },
 
   // --- Auction Service ---
-  createAuction(auctionData, token) {
-    return request("/auctions", "POST", auctionData, token);
+  createAuction(auctionData) {
+    return request("/auctions", "POST", auctionData, true); // Requiere auth
   },
-
   getActiveAuctions() {
-    return request("/auctions", "GET");
+    return request("/auctions", "GET", null, false); // Pública
   },
-
   getAuctionById(id) {
-    return request(`/auctions/${id}`, "GET");
+    return request(`/auctions/${id}`, "GET", null, false); // Pública
   },
-
-  placeBid(auctionId, amount, token) {
-    return request(`/auctions/${auctionId}/bids`, "POST", { amount }, token);
+  placeBid(auctionId, amount) {
+    return request(`/auctions/${auctionId}/bids`, "POST", { amount }, true); // Requiere auth
   },
-
-  // --- INICIO DE LA CORRECCIÓN ---
-  // NUEVO MÉTODO para llamar al nuevo endpoint del backend
-  getMyAuctions(token) {
-    return request('/auctions/my-auctions', 'GET', null, token);
+  getMyAuctions() {
+    return request('/auctions/my-auctions', 'GET', null, true); // Requiere auth
   },
-  // --- FIN DE LA CORRECCIÓN ---
 
   // --- Chat Service ---
-  getChatHistory(auctionId, token) {
-    return request(`/chat/${auctionId}/history`, "GET", null, token);
+  getChatHistory(auctionId) {
+    return request(`/chat/${auctionId}/history`, "GET", null, true); // Requiere auth
   },
 };
 
 // ================================================================
-// Cliente de WebSockets
+// Cliente de WebSockets (sin cambios, la lógica era correcta)
 // ================================================================
 export const socket = {
   chat: null,
@@ -132,24 +159,22 @@ export const socket = {
       return;
     }
 
-    // --- Conexión al Chat ---
-    if (!this.chat) {
-      this.chat = io(WS_GATEWAY_URL, {
-        path: "/chat/socket.io/", // Ruta única para el chat
-        auth: { token }
-      });
+    const commonOptions = (path) => ({
+      path,
+      auth: { token },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
 
+    if (!this.chat) {
+      this.chat = io(WS_GATEWAY_URL, commonOptions("/chat/socket.io/"));
       this.chat.on('connect', () => console.log('✅ Conectado al WebSocket de Chat'));
       this.chat.on('connect_error', (err) => console.error('❌ Error de conexión al Chat:', err.message));
     }
 
-    // --- Conexión a Subastas ---
     if (!this.auction) {
-      this.auction = io(WS_GATEWAY_URL, {
-        path: "/auction/socket.io/", // Ruta única para las subastas
-        auth: { token }
-      });
-
+      this.auction = io(WS_GATEWAY_URL, commonOptions("/auction/socket.io/"));
       this.auction.on('connect', () => console.log('✅ Conectado al WebSocket de Subastas'));
       this.auction.on('connect_error', (err) => console.error('❌ Error de conexión a Subastas:', err.message));
     }

@@ -123,9 +123,17 @@ import Footer from '../components/Footer.astro';
 </Layout>
 
 <script>
-    import { $token } from "../stores/authStore.js";
+    // Se importa el store del token para la comprobación inicial y para Supabase
+    import { $token } from "../store/auth.js";
     import { api } from "../services/api.js";
     import { supabase } from "../services/supabaseClient.js";
+
+    // --- 1. PROTECCIÓN DE LA PÁGINA ---
+    // Verificamos si hay un token al cargar la página.
+    // Si no lo hay, redirigimos al login, ya que esta es una ruta protegida.
+    if (!$token.get()) {
+        window.location.href = '/login?reason=unauthorized';
+    }
 
     // --- Elementos del DOM ---
     const form = document.getElementById('auction-form');
@@ -140,7 +148,7 @@ import Footer from '../components/Footer.astro';
     const removeImageBtn = document.getElementById('remove-image');
     const dropZone = document.getElementById('drop-zone');
 
-    // --- Funciones de UI ---
+    // --- Funciones de UI (sin cambios) ---
     function showError(message) {
         errorDiv.textContent = message;
         errorDiv.classList.remove('hidden');
@@ -158,7 +166,7 @@ import Footer from '../components/Footer.astro';
         successDiv.classList.add('hidden');
     }
 
-    // --- Lógica de Subida de Imagen ---
+    // --- Lógica de Subida de Imagen (sin cambios) ---
     uploadBtn.addEventListener('click', () => imageInput.click());
     removeImageBtn.addEventListener('click', () => {
         imageInput.value = '';
@@ -171,7 +179,6 @@ import Footer from '../components/Footer.astro';
         if (file) handleFile(file);
     });
 
-    // Lógica de Drag and Drop
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, (e) => {
             e.preventDefault();
@@ -212,11 +219,11 @@ import Footer from '../components/Footer.astro';
         e.preventDefault();
         hideMessages();
 
+        // La comprobación inicial del token es ahora un doble seguro,
+        // ya que la página redirige si no hay token al cargar.
         const token = $token.get();
         if (!token) {
             showError('Debes iniciar sesión para crear una subasta.');
-            // Opcional: redirigir al login
-            // window.location.href = '/login';
             return;
         }
 
@@ -225,7 +232,7 @@ import Footer from '../components/Footer.astro';
             productName: formData.get('productName').trim(),
             productDescription: formData.get('productDescription').trim(),
             startPrice: parseFloat(formData.get('startPrice')),
-            endTime: new Date(formData.get('endTime')).toISOString(), // Asegurar formato ISO
+            endTime: new Date(formData.get('endTime')).toISOString(),
             imageUrl: null
         };
 
@@ -243,10 +250,10 @@ import Footer from '../components/Footer.astro';
             if (imageFile) {
                 submitBtn.textContent = 'Subiendo imagen...';
 
-                // Autenticar en Supabase con el token JWT de nuestro backend
+                // La autenticación con Supabase sigue necesitando el token explícitamente.
                 await supabase.auth.setSession({
                     access_token: token,
-                    refresh_token: token // Supabase necesita ambos, podemos usar el mismo
+                    refresh_token: token
                 });
                 
                 const fileExt = imageFile.name.split('.').pop();
@@ -254,7 +261,7 @@ import Footer from '../components/Footer.astro';
                 const filePath = `products/${fileName}`;
 
                 const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('deal-online') // Nombre de tu bucket
+                    .from('deal-online')
                     .upload(filePath, imageFile);
 
                 if (uploadError) throw new Error(`Error al subir la imagen: ${uploadError.message}`);
@@ -266,9 +273,10 @@ import Footer from '../components/Footer.astro';
                 auctionData.imageUrl = urlData.publicUrl;
             }
 
-            // 2. Crear la subasta a través de nuestro microservicio
+            // --- 2. CREAR LA SUBASTA (LÓGICA SIMPLIFICADA) ---
+            // Ya no es necesario pasar el token. Nuestra API se encarga de ello.
             submitBtn.textContent = 'Creando subasta...';
-            const response = await api.createAuction(auctionData, token);
+            const response = await api.createAuction(auctionData);
             
             showSuccess('¡Subasta creada con éxito! Serás redirigido...');
             
@@ -279,6 +287,8 @@ import Footer from '../components/Footer.astro';
 
         } catch (err) {
             console.error('Error al crear la subasta:', err);
+            // Si el error es 401, nuestro `api.js` ya habrá limpiado la sesión.
+            // Aquí solo mostramos el mensaje de error devuelto.
             showError(err.message || 'Ocurrió un error inesperado.');
         } finally {
             submitBtn.disabled = false;

@@ -1,28 +1,41 @@
 import { atom } from 'nanostores';
 import { persistentAtom } from '@nanostores/persistent';
-import { api } from '../services/api.js';
+import { api, socket } from '../services/api.js'; // Importamos también el socket
 
-// Persistent stores for authentication
+// ================================================================
+// Stores (Almacenes de Estado)
+// ================================================================
+
+// Guardan el token y el usuario en localStorage para que la sesión persista
 export const $token = persistentAtom('authToken', null);
 export const $user = persistentAtom('user', null, {
   encode: JSON.stringify,
   decode: JSON.parse,
 });
 
-// Regular stores for UI state
+// Stores temporales para manejar el estado de la UI
 export const $authLoading = atom(false);
 export const $authError = atom(null);
 
-// Auth actions
+// ================================================================
+// Acciones (Lógica de Autenticación)
+// ================================================================
 export const authActions = {
   async login(email, password) {
     $authLoading.set(true);
     $authError.set(null);
 
     try {
-      const { user, token } = await api.login(email, password);
-      $token.set(token);
+      const response = await api.login(email, password);
+      const { user, accessToken } = response;
+      
+      // Actualizamos los stores, lo que guarda los datos en localStorage
+      $token.set(accessToken);
       $user.set(user);
+
+      // Conectamos los WebSockets después de un login exitoso
+      socket.connect(accessToken);
+
       return { success: true };
     } catch (error) {
       $authError.set(error.message);
@@ -47,14 +60,21 @@ export const authActions = {
     }
   },
 
-  async verifyRegistration(email, code) {
+  async verify(email, code) {
     $authLoading.set(true);
     $authError.set(null);
 
     try {
-      const { user, token } = await api.verifyRegistration(email, code);
-      $token.set(token);
+      const response = await api.verify(email, code);
+      const { user, accessToken } = response;
+
+      // Al verificar, también iniciamos sesión automáticamente
+      $token.set(accessToken);
       $user.set(user);
+
+      // Y conectamos los WebSockets
+      socket.connect(accessToken);
+
       return { success: true };
     } catch (error) {
       $authError.set(error.message);
@@ -64,34 +84,19 @@ export const authActions = {
     }
   },
 
-  async logout() {
-    const token = $token.get();
-    if (token) {
-      try {
-        await api.logout(token);
-      } catch (error) {
-        console.warn('Logout request failed:', error);
-      }
-    }
-    
+  // CORREGIDO: Logout es ahora una operación 100% del lado del cliente.
+  logout() {
+    // 1. Borramos el token y el usuario de localStorage.
     $token.set(null);
     $user.set(null);
     $authError.set(null);
-  },
 
-  async refreshToken() {
-    const token = $token.get();
-    if (!token) return false;
+    // 2. Desconectamos los WebSockets para limpiar la conexión.
+    socket.disconnect();
 
-    try {
-      const { token: newToken } = await api.refreshToken(token);
-      $token.set(newToken);
-      return true;
-    } catch (error) {
-      console.warn('Token refresh failed:', error);
-      this.logout();
-      return false;
-    }
+    console.log('Sesión cerrada exitosamente en el frontend.');
+    // Opcional: Redirigir a la página de inicio
+    // window.location.href = '/'; 
   },
 
   clearError() {
@@ -99,43 +104,17 @@ export const authActions = {
   }
 };
 
-// Auto-refresh token logic
-let refreshInterval;
-
-function startTokenRefresh() {
-  clearInterval(refreshInterval);
-  
-  refreshInterval = setInterval(async () => {
-    const token = $token.get();
-    if (!token) return;
-
-    try {
-      // Parse JWT to check expiration
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const exp = payload.exp * 1000;
-      const now = Date.now();
-      
-      // Refresh if token expires in less than 5 minutes
-      if (now > exp - 5 * 60 * 1000) {
-        await authActions.refreshToken();
-      }
-    } catch (error) {
-      console.warn('Token parsing failed:', error);
-      authActions.logout();
-    }
-  }, 60000); // Check every minute
-}
-
-// Initialize token refresh on client side
+// ================================================================
+// Lógica de Inicialización
+// ================================================================
+// Este código se ejecuta solo una vez en el cliente cuando la app carga
 if (typeof window !== 'undefined') {
-  startTokenRefresh();
+  const initialToken = $token.get();
   
-  // Listen for token changes
-  $token.subscribe((token) => {
-    if (token) {
-      startTokenRefresh();
-    } else {
-      clearInterval(refreshInterval);
-    }
-  });
+  if (initialToken) {
+    // Si encontramos un token en localStorage al cargar la página,
+    // intentamos conectar los WebSockets inmediatamente.
+    console.log('Token encontrado en localStorage, conectando WebSockets...');
+    socket.connect(initialToken);
+  }
 }
