@@ -35,7 +35,7 @@ import Footer from "../components/Footer.astro";
                 </svg>
               </div>
               <div class="ml-4">
-                <p class="text-sm text-gray-600">Mis Productos</p>
+                <p class="text-sm text-gray-600">Mis Subastas</p>
                 <p class="text-2xl font-bold text-gray-900">
                   <span id="products-count" class="inline-block min-w-[2ch]">-</span>
                 </p>
@@ -95,7 +95,7 @@ import Footer from "../components/Footer.astro";
 
         <!-- Quick Actions -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <a href="/createProduct" class="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow group">
+          <a href="/createAuction" class="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow group">
             <div class="flex items-center">
               <div class="p-3 bg-primary-100 rounded-lg group-hover:bg-primary-200 transition-colors">
                 <svg class="w-6 h-6 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
@@ -103,7 +103,7 @@ import Footer from "../components/Footer.astro";
                 </svg>
               </div>
               <div class="ml-4">
-                <h3 class="font-semibold text-gray-900">Vender Producto</h3>
+                <h3 class="font-semibold text-gray-900">Crear Subasta</h3>
                 <p class="text-sm text-gray-600">Crea una nueva subasta</p>
               </div>
             </div>
@@ -171,7 +171,7 @@ import Footer from "../components/Footer.astro";
 
   // State
   let dashboardData = {
-    userProducts: [],
+    userAuctions: [],
     userBids: [],
     userStats: null
   };
@@ -263,17 +263,17 @@ import Footer from "../components/Footer.astro";
 
       showStatsLoading();
 
-      // Try to use the getUserStats endpoint first
+      // Try to use getUserStats first
       let userStats = null;
       try {
-        userStats = await api.getUserStats(token);
+        userStats = await api.getUserStats();
         console.log('✅ Loaded user stats from API:', userStats);
       } catch (statsError) {
         console.warn('⚠️ getUserStats not available, falling back to individual calls:', statsError.message);
       }
 
-      // If getUserStats worked, use those stats
       if (userStats) {
+        // Use stats from getUserStats endpoint
         updateStatsDisplay({
           productsCount: userStats.productsCount || userStats.totalProducts || 0,
           activeAuctionsCount: userStats.activeAuctionsCount || userStats.activeAuctions || 0,
@@ -282,23 +282,23 @@ import Footer from "../components/Footer.astro";
         });
         dashboardData.userStats = userStats;
       } else {
-        // Fallback to individual API calls
-        const [userProducts, userBids] = await Promise.all([
-          api.getUserProducts(token).catch(err => {
-            console.warn('⚠️ Failed to load user products:', err.message);
+        // Use the auction APIs to get real data
+        const [userAuctions, userBids] = await Promise.all([
+          api.getMyAuctions().catch(err => {
+            console.warn('⚠️ Failed to load user auctions:', err.message);
             return [];
           }),
-          api.getUserBids(token).catch(err => {
+          api.getUserBids().catch(err => {
             console.warn('⚠️ Failed to load user bids:', err.message);
             return [];
           })
         ]);
 
-        dashboardData.userProducts = userProducts;
+        dashboardData.userAuctions = userAuctions;
         dashboardData.userBids = userBids;
 
-        // Calculate stats from the data
-        const stats = calculateStatsFromData(userProducts, userBids, currentUser);
+        // Calculate stats from the auction data
+        const stats = calculateStatsFromAuctionData(userAuctions, userBids, currentUser);
         updateStatsDisplay(stats);
       }
 
@@ -313,14 +313,13 @@ import Footer from "../components/Footer.astro";
   }
 
   /**
-   * Calculate stats from raw data when getUserStats is not available
+   * Calculate stats from auction data
    */
-  function calculateStatsFromData(products, bids, currentUser) {
-    const productsCount = products.length;
+  function calculateStatsFromAuctionData(auctions, bids, currentUser) {
+    const auctionsCount = auctions.length;
     
     // Count active auctions
-    const activeAuctionsCount = products.filter(product => {
-      const auction = product.Auction || product.auction;
+    const activeAuctionsCount = auctions.filter(auction => {
       return auction && auction.status === 'active';
     }).length;
     
@@ -328,14 +327,14 @@ import Footer from "../components/Footer.astro";
     
     // Count won auctions
     const wonAuctionsCount = bids.filter(bid => {
-      const auction = bid.auction || bid.Auction;
+      const auction = bid.auction;
       return auction && 
              auction.status === 'closed' && 
              (auction.winner_id === currentUser.id || auction.winnerId === currentUser.id);
     }).length;
 
     return {
-      productsCount,
+      productsCount: auctionsCount,
       activeAuctionsCount,
       bidsCount,
       wonAuctionsCount
@@ -350,17 +349,17 @@ import Footer from "../components/Footer.astro";
       const token = $token.get();
       if (!token) return;
 
-      // If we don't have products and bids data, fetch them
-      if (dashboardData.userProducts.length === 0 && dashboardData.userBids.length === 0) {
-        const [products, bids] = await Promise.all([
-          api.getUserProducts(token).catch(() => []),
-          api.getUserBids(token).catch(() => [])
+      // If we don't have auctions and bids data, fetch them
+      if (dashboardData.userAuctions.length === 0 && dashboardData.userBids.length === 0) {
+        const [auctions, bids] = await Promise.all([
+          api.getMyAuctions().catch(() => []),
+          api.getUserBids().catch(() => [])
         ]);
-        dashboardData.userProducts = products;
+        dashboardData.userAuctions = auctions;
         dashboardData.userBids = bids;
       }
 
-      displayRecentActivity(dashboardData.userProducts, dashboardData.userBids);
+      displayRecentActivity(dashboardData.userAuctions, dashboardData.userBids);
     } catch (error) {
       console.error('❌ Error loading recent activity:', error);
       showRecentActivityError();
@@ -370,38 +369,37 @@ import Footer from "../components/Footer.astro";
   /**
    * Display recent activity in the UI
    */
-  function displayRecentActivity(products, bids) {
+  function displayRecentActivity(auctions, bids) {
     if (!recentActivityEl) return;
 
     // Combine and sort recent activities
     const activities = [];
     
-    // Recent products (last 5)
-    products.slice(-5).forEach(product => {
+    // Recent auctions (last 5)
+    auctions.slice(-5).forEach(auction => {
       activities.push({
-        type: 'product',
-        date: new Date(product.createdAt || product.created_at),
-        content: `Publicaste "${product.name || product.title}"`,
-        link: `/products/${product.id}`
+        type: 'auction',
+        date: new Date(auction.createdAt || auction.created_at),
+        content: `Creaste la subasta "${auction.productName || auction.product_name || 'Subasta'}"`,
+        link: `/auctions/${auction.id}`
       });
     });
     
     // Recent bids (last 5)
     bids.slice(-5).forEach(bid => {
-      const auction = bid.auction || bid.Auction;
-      const product = auction?.Product || auction?.product;
-      const productName = product?.name || product?.title || 'Producto';
+      const auction = bid.auction;
+      const auctionName = auction?.productName || auction?.product_name || 'Subasta';
       
       activities.push({
         type: 'bid',
         date: new Date(bid.createdAt || bid.created_at),
-        content: `Ofertaste $${(bid.amount || 0).toLocaleString()} en "${productName}"`,
-        link: product ? `/products/${product.id}` : null
+        content: `Ofertaste $${(bid.amount || 0).toLocaleString()} en "${auctionName}"`,
+        link: auction ? `/auctions/${auction.id}` : null
       });
     });
     
     // Sort by date (most recent first)
-    activities.sort((a, b) => b.date - a.date);
+    activities.sort((a, b) => b.date.getTime() - a.date.getTime());
     
     if (activities.length === 0) {
       recentActivityEl.innerHTML = `
@@ -412,7 +410,7 @@ import Footer from "../components/Footer.astro";
             </svg>
           </div>
           <p class="text-gray-500">No hay actividad reciente</p>
-          <p class="text-sm text-gray-400 mt-1">Comienza creando tu primer producto o haciendo una oferta</p>
+          <p class="text-sm text-gray-400 mt-1">Comienza creando tu primera subasta o haciendo una oferta</p>
         </div>
       `;
       return;
@@ -423,7 +421,7 @@ import Footer from "../components/Footer.astro";
         ${activities.slice(0, 5).map(activity => `
           <div class="flex items-start space-x-3">
             <div class="flex-shrink-0">
-              ${activity.type === 'product' ? `
+              ${activity.type === 'auction' ? `
                 <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                   <svg class="w-4 h-4 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
@@ -477,23 +475,24 @@ import Footer from "../components/Footer.astro";
    * Format date for display
    */
   function formatDate(date) {
-    if (!date || isNaN(date.getTime())) return 'Fecha no disponible';
+    if (!date || isNaN(new Date(date).getTime())) return 'Fecha no disponible';
     
+    const dateObj = new Date(date);
     const now = new Date();
-    const diffMs = now - date;
+    const diffMs = now.getTime() - dateObj.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
     if (diffDays === 0) {
-      return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      return dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     } else if (diffDays === 1) {
       return 'Ayer';
     } else if (diffDays < 7) {
       return `${diffDays} días atrás`;
     } else {
-      return date.toLocaleDateString('es-ES', { 
+      return dateObj.toLocaleDateString('es-ES', { 
         day: 'numeric', 
         month: 'short',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        year: dateObj.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
       });
     }
   }

@@ -10,7 +10,11 @@ const { auctionId } = Astro.params;
 let auction = null;
 let error = null;
 
+// Obtener la URL de WebSocket desde las variables de entorno
+const WS_URL = import.meta.env.PUBLIC_WS_URL || 'https://api-gateway-gdwfddukda-rj.a.run.app';
+
 console.log('🔍 Attempting to load auction with ID:', auctionId);
+console.log('🔧 WebSocket URL configurada:', WS_URL);
 auction = await api.getAuctionById(auctionId);
 console.log(auction);
 
@@ -106,43 +110,33 @@ if (!auction && !error) {
           </div>
 
           <form id="bid-form" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div class="flex items-end space-x-3">
+              <div class="flex-1">
                 <label for="bid-amount" class="block text-sm font-medium text-gray-700 mb-1">
-                  Monto de la Oferta (mínimo: ${(parseFloat(auction.current_price) + 0.01).toFixed(2)})
+                  Tu oferta (mínimo: $${(parseFloat(auction.current_price) + 0.01).toFixed(2)})
                 </label>
-                <input
-                  type="number"
-                  id="bid-amount"
-                  step="0.01"
-                  min={(parseFloat(auction.current_price) + 0.01).toFixed(2)}
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Ingresa tu oferta"
-                  required
-                />
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    id="bid-amount"
+                    step="0.01"
+                    min={(parseFloat(auction.current_price) + 0.01).toFixed(2)}
+                    class="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-lg"
+                    placeholder={(parseFloat(auction.current_price) + 1).toFixed(2)}
+                    required
+                  />
+                </div>
               </div>
               
-              <div>
-                <label for="bid-message" class="block text-sm font-medium text-gray-700 mb-1">
-                  Mensaje (opcional)
-                </label>
-                <input
-                  type="text"
-                  id="bid-message"
-                  maxlength="100"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Mensaje opcional"
-                />
-              </div>
+              <button
+                type="submit"
+                id="bid-button"
+                class="bg-primary-500 text-white px-6 py-3 rounded-lg hover:bg-primary-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
+              >
+                <span id="bid-button-text">Ofertar</span>
+              </button>
             </div>
-            
-            <button
-              type="submit"
-              id="bid-button"
-              class="w-full bg-primary-500 text-white py-3 px-4 rounded-lg hover:bg-primary-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Enviar Oferta
-            </button>
           </form>
         </div>
       )}
@@ -151,10 +145,6 @@ if (!auction && !error) {
       <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
         <div class="bg-gray-50 px-6 py-3 border-b">
           <h2 class="text-lg font-semibold text-gray-900">Chat de la Subasta</h2>
-          <p class="text-sm text-gray-600">
-            <span id="connection-status" class="text-gray-500">Conectando...</span>
-            • <span id="user-count">0</span> usuarios conectados
-          </p>
         </div>
         
         <!-- Messages Container -->
@@ -208,12 +198,13 @@ if (!auction && !error) {
   )}
 </Layout>
 
-<script define:vars={{ auction }}>
+<script define:vars={{ auction, WS_URL }}>
   // Import stores and services
   let $user, $token, api, io;
   
-  // WebSocket connection
-  let socket = null;
+  // WebSocket connections
+  let chatSocket = null;
+  let auctionSocket = null;
   let isConnected = false;
 
   // Initialize everything
@@ -245,10 +236,10 @@ if (!auction && !error) {
       // Check authentication
       checkAuth();
       
-      // Initialize WebSocket if authenticated
+      // Initialize WebSockets if authenticated (solo para chat y actualizaciones)
       const token = $token.get();
       if (token) {
-        initWebSocket(token);
+        initWebSockets(token);
       }
       
       // Initialize countdown
@@ -271,105 +262,139 @@ if (!auction && !error) {
     const authRequired = document.getElementById('auth-required');
     const messageForm = document.getElementById('message-form');
     const messageAuthRequired = document.getElementById('message-auth-required');
+    const bidButton = document.getElementById('bid-button');
+    const bidAmount = document.getElementById('bid-amount');
 
     if (token && user) {
       bidForm?.classList.remove('hidden');
       authRequired?.classList.add('hidden');
       messageForm?.classList.remove('hidden');
       messageAuthRequired?.classList.add('hidden');
+      
+      // Habilitar formulario de ofertas si hay token válido
+      if (bidAmount) bidAmount.disabled = false;
+      if (bidButton) bidButton.disabled = false;
     } else {
       bidForm?.classList.add('hidden');
       authRequired?.classList.remove('hidden');
       messageForm?.classList.add('hidden');
       messageAuthRequired?.classList.remove('hidden');
+      
+      // Deshabilitar formulario de ofertas
+      if (bidButton) bidButton.disabled = true;
+      if (bidAmount) bidAmount.disabled = true;
     }
   }
 
-  // Initialize WebSocket connection
-  function initWebSocket(token) {
+  // Initialize WebSocket connections (Chat + Auction)
+  function initWebSockets(token) {
     try {
-      const WS_URL = 'http://localhost:3501';
+      console.log('🔧 Conectando a WebSocket URL:', WS_URL);
       
-      socket = io(WS_URL, {
+      // Configuración común para ambos servicios
+      const commonConfig = {
         auth: { token },
-        transports: ['websocket', 'polling']
+        cors: { origin: '*' },
+        transports: ['websocket'],
+        upgrade: false,
+        rememberUpgrade: false
+      };
+
+      // === CHAT SERVICE CONNECTION ===
+      chatSocket = io(WS_URL, {
+        ...commonConfig,
+        path: '/chat/socket.io'
       });
 
-      socket.on('connect', () => {
-        console.log('✅ Connected to WebSocket');
-        isConnected = true;
-        updateConnectionStatus('Conectado');
+      chatSocket.on('connect', () => {
+        console.log('✅ Conectado al Chat Service:', chatSocket.id);
         
-        // Join auction room
-        socket.emit('join_auction', { auctionId: auction.id });
+        // Join chat room
+        console.log('📤 Enviando join_chat_room...', { auctionId: auction.id });
+        chatSocket.emit('join_chat_room', { auctionId: auction.id });
       });
 
-      socket.on('disconnect', () => {
-        console.log('❌ Disconnected from WebSocket');
-        isConnected = false;
-        updateConnectionStatus('Desconectado');
+      chatSocket.on('disconnect', () => {
+        console.log('❌ Desconectado del Chat Service');
       });
 
-      socket.on('joined_auction', (data) => {
-        console.log('🏠 Joined auction:', data);
-        updateUserCount(data.connectedCount || 0);
+      chatSocket.on('joined_chat_room', (data) => {
+        console.log('🏠 Se unió a la sala de chat:', data);
+        isConnected = true;
       });
 
-      socket.on('chat_history', (messages) => {
-        console.log('📜 Chat history:', messages);
-        displayMessages(messages);
-      });
-
-      socket.on('new_message', (message) => {
-        console.log('💬 New message:', message);
+      chatSocket.on('new_message', (message) => {
+        console.log('� Nuevo mensaje:', message);
         addMessage(message);
       });
 
-      socket.on('new_bid', (bidData) => {
-        console.log('💰 New bid:', bidData);
-        updateCurrentPrice(bidData.currentPrice || bidData.amount);
-        addBidMessage(bidData);
+      chatSocket.on('connect_error', (error) => {
+        console.error('� Error de conexión al Chat:', error);
+        updateConnectionStatus('Error de conexión');
       });
 
-      socket.on('price_update', (data) => {
-        console.log('💲 Price update:', data);
-        updateCurrentPrice(data.currentPrice);
+      chatSocket.on('error', (error) => {
+        console.error('❌ Chat Socket error:', error);
+        console.log('🚨 Error:', error.message || error);
       });
 
-      socket.on('user_joined', (data) => {
-        updateUserCount(data.connectedCount || 0);
-        addSystemMessage(`${data.username || 'Usuario'} se unió al chat`);
+      // === AUCTION SERVICE CONNECTION ===
+      auctionSocket = io(WS_URL, {
+        ...commonConfig,
+        path: '/auction/socket.io'
       });
 
-      socket.on('user_left', (data) => {
-        updateUserCount(data.connectedCount || 0);
-        addSystemMessage(`${data.username || 'Usuario'} salió del chat`);
+      auctionSocket.on('connect', () => {
+        console.log('✅ Conectado al Auction Service:', auctionSocket.id);
+        
+        // Join auction room
+        console.log('📤 Enviando join_auction...', { auctionId: auction.id });
+        auctionSocket.emit('join_auction', { auctionId: auction.id });
       });
 
-      socket.on('error', (error) => {
-        console.error('❌ Socket error:', error);
-        console.log('Error: ' + error.message);
+      auctionSocket.on('disconnect', () => {
+        console.log('❌ Desconectado del Auction Service');
+      });
+
+      auctionSocket.on('joined_auction', (data) => {
+        console.log('🏠 Se unió a la sala de subasta:', data);
+      });
+
+      auctionSocket.on('new_bid', (bidData) => {
+        console.log('💰 Nueva oferta recibida:', bidData);
+        
+        // Solo actualizar si la oferta no es nuestra (para evitar duplicados)
+        const user = $user.get();
+        if (bidData.userId !== user?.id) {
+          updateCurrentPrice(bidData.amount);
+          addBidMessage(bidData);
+          
+          // Mostrar notificación de nueva oferta
+          addSystemMessage(`${bidData.username} hizo una oferta de $${parseFloat(bidData.amount).toLocaleString()}`);
+        }
+      });
+
+      auctionSocket.on('price_update', (data) => {
+        console.log('💲 Actualización de precio:', data);
+        
+        // Actualizar precio actual y formulario
+        if (data.newPrice && data.newPrice > auction.current_price) {
+          updateCurrentPrice(data.newPrice);
+          auction.current_price = data.newPrice;
+        }
+      });
+
+      auctionSocket.on('connect_error', (error) => {
+        console.error('🔌 Error de conexión al Auction:', error);
+      });
+
+      auctionSocket.on('error', (error) => {
+        console.error('❌ Auction Socket error:', error);
+        console.log('🚨 Error:', error.message || error);
       });
 
     } catch (error) {
-      console.error('Error initializing WebSocket:', error);
-    }
-  }
-
-  // Update connection status
-  function updateConnectionStatus(status) {
-    const statusEl = document.getElementById('connection-status');
-    if (statusEl) {
-      statusEl.textContent = status;
-      statusEl.className = isConnected ? 'text-success-600' : 'text-error-600';
-    }
-  }
-
-  // Update user count
-  function updateUserCount(count) {
-    const countEl = document.getElementById('user-count');
-    if (countEl) {
-      countEl.textContent = count || 0;
+      console.error('Error initializing WebSockets:', error);
     }
   }
 
@@ -386,10 +411,11 @@ if (!auction && !error) {
       const minBid = parseFloat(price || 0) + 0.01;
       bidInput.min = minBid.toFixed(2);
       bidInput.step = "0.01";
+      bidInput.placeholder = (minBid + 1).toFixed(2);
       
       const label = document.querySelector('label[for="bid-amount"]');
       if (label) {
-        label.textContent = `Monto de la Oferta (mínimo: $${minBid.toFixed(2)})`;
+        label.textContent = `Tu oferta (mínimo: $${minBid.toFixed(2)})`;
       }
     }
     
@@ -467,7 +493,7 @@ if (!auction && !error) {
     addMessage({
       userId: bidData.userId,
       username: bidData.username,
-      message: `Hizo una oferta de $${parseFloat(bidData.bidAmount || bidData.amount || 0).toLocaleString()}${bidData.message ? ` - ${bidData.message}` : ''}`,
+      message: `Hizo una oferta de $${parseFloat(bidData.bidAmount || bidData.amount || 0).toLocaleString()}`,
       timestamp: bidData.timestamp || new Date().toISOString(),
       type: 'bid'
     });
@@ -518,6 +544,9 @@ if (!auction && !error) {
   document.addEventListener('DOMContentLoaded', () => {
     init();
 
+    // Ejecutar checkAuth después de un pequeño delay para asegurar que el DOM esté listo
+    setTimeout(checkAuth, 100);
+
     // Bid form handler
     const bidForm = document.getElementById('bid-form');
     if (bidForm) {
@@ -525,11 +554,10 @@ if (!auction && !error) {
         e.preventDefault();
         
         const amountInput = document.getElementById('bid-amount');
-        const messageInput = document.getElementById('bid-message');
         const bidButton = document.getElementById('bid-button');
         
-        if (!amountInput || !socket || !isConnected) {
-          alert('No hay conexión al servidor. Por favor, recarga la página.');
+        if (!amountInput) {
+          alert('Error en el formulario. Por favor, recarga la página.');
           return;
         }
         
@@ -537,52 +565,39 @@ if (!auction && !error) {
         const currentPrice = parseFloat(auction.current_price);
         const minBid = currentPrice + 0.01;
         
-        // Validación más precisa
+        // Validación
         if (isNaN(amount) || amount < minBid) {
           alert(`Por favor ingresa un monto válido. El mínimo es $${minBid.toFixed(2)}`);
           return;
         }
         
         bidButton.disabled = true;
-        bidButton.textContent = 'Enviando...';
+        bidButton.innerHTML = '<span class="inline-flex items-center"><svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Enviando...</span>';
         
         try {
-          const bidData = {
-            auctionId: auction.id,
-            bidAmount: amount,
-            message: messageInput.value || ''
-          };
+          console.log('📤 Enviando oferta:', { amount });
+          const response = await api.placeBid(auction.id, amount);
           
-          // Mostrar inmediatamente en el chat local
-          const user = $user.get();
-          const bidMessage = {
-            userId: user?.id,
-            username: user?.nombre || 'Tú',
-            message: `Hizo una oferta de $${amount.toLocaleString()}${bidData.message ? ` - ${bidData.message}` : ''}`,
-            timestamp: new Date().toISOString(),
-            type: 'bid',
-            is_bid: true
-          };
+          console.log('✅ Oferta enviada exitosamente:', response);
+          alert('¡Oferta enviada exitosamente!');
           
-          addMessage(bidMessage);
-          
-          // Send bid via WebSocket
-          socket.emit('place_bid', bidData);
-          
-          // Clear form
+          // Limpiar formulario
           amountInput.value = '';
-          messageInput.value = '';
           
-          // Update current price locally (será confirmado por el servidor)
+          // Actualizar precio local
           auction.current_price = amount;
           updateCurrentPrice(amount);
           
+          // Mostrar mensaje en el chat
+          const user = $user.get();
+          addSystemMessage(`Has hecho una oferta de $${amount.toLocaleString()}`);
+          
         } catch (error) {
           console.error('Error sending bid:', error);
-          alert('Error al enviar la oferta: ' + error.message);
+          alert('Error al enviar la oferta: ' + (error.message || 'Error desconocido'));
         } finally {
           bidButton.disabled = false;
-          bidButton.textContent = 'Enviar Oferta';
+          bidButton.innerHTML = '<span id="bid-button-text">Ofertar</span>';
         }
       });
     }
@@ -594,7 +609,7 @@ if (!auction && !error) {
         e.preventDefault();
         
         const messageInput = document.getElementById('message-input');
-        if (!messageInput || !socket || !isConnected) {
+        if (!messageInput || !chatSocket || !isConnected) {
           alert('No hay conexión al servidor. Por favor, recarga la página.');
           return;
         }
@@ -603,7 +618,12 @@ if (!auction && !error) {
         if (!message) return;
         
         try {
-          socket.emit('send_message', {
+          console.log('📤 Enviando mensaje:', {
+            auctionId: auction.id,
+            message: message
+          });
+          
+          chatSocket.emit('send_message', {
             auctionId: auction.id,
             message: message
           });
@@ -619,9 +639,12 @@ if (!auction && !error) {
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
-    if (socket) {
-      socket.emit('leave_auction', { auctionId: auction.id });
-      socket.disconnect();
+    if (chatSocket) {
+      chatSocket.emit('leave_chat_room', { auctionId: auction.id });
+      chatSocket.disconnect();
+    }
+    if (auctionSocket) {
+      auctionSocket.disconnect();
     }
   });
 </script>

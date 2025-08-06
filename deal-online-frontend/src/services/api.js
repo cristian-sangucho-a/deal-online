@@ -1,12 +1,13 @@
 import { io } from "socket.io-client";
 // 1. IMPORTAMOS EL STORE DEL TOKEN Y LAS ACCIONES DE AUTH
 // Esto nos permite leer el token y llamar a la función de logout.
-import { $token, authActions } from '../stores/authStore.js';
+import { $token, authActions } from "../stores/authStore.js";
 
 // --- Variables de Entorno y Debugging (sin cambios) ---
 // Se asume que estas variables se resuelven correctamente en tu entorno de compilación (ej. Vite, Astro).
-const API_GATEWAY_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
-const WS_GATEWAY_URL = import.meta.env.PUBLIC_WS_URL || 'http://localhost:3000';
+const API_GATEWAY_URL =
+  import.meta.env.PUBLIC_API_URL || "http://localhost:3000";
+const WS_GATEWAY_URL = import.meta.env.PUBLIC_WS_URL || "http://localhost:3000";
 
 console.log(`🔧 API Gateway URL configurada: ${API_GATEWAY_URL}`);
 console.log(`🔧 WebSocket Gateway URL configurada: ${WS_GATEWAY_URL}`);
@@ -46,7 +47,12 @@ export class ApiError extends Error {
  * @param {object|null} body - El cuerpo de la petición para POST, PUT, etc.
  * @param {boolean} requiresAuth - Si es `true`, se adjuntará el token JWT a la petición.
  */
-const request = async (endpoint, method = "GET", body = null, requiresAuth = false) => {
+const request = async (
+  endpoint,
+  method = "GET",
+  body = null,
+  requiresAuth = false
+) => {
   const fullUrl = `${API_GATEWAY_URL}/api${endpoint}`;
 
   const headers = {
@@ -82,7 +88,9 @@ const request = async (endpoint, method = "GET", body = null, requiresAuth = fal
     // Si la respuesta es 401, el token es inválido o ha expirado.
     // Limpiamos la sesión en el frontend para evitar más errores.
     if (response.status === 401 && requiresAuth) {
-      console.warn('Token inválido o expirado detectado. Cerrando sesión localmente.');
+      console.warn(
+        "Token inválido o expirado detectado. Cerrando sesión localmente."
+      );
       authActions.logout(); // Usamos la acción de logout para limpiar el token y el usuario.
     }
 
@@ -137,12 +145,12 @@ export const api = {
     return request(`/auctions/${auctionId}/bids`, "POST", { amount }, true); // Requiere auth
   },
   getMyAuctions() {
-    return request('/auctions/my-auctions', 'GET', null, true); // Requiere auth
+    return request("/auctions/my-auctions", "GET", null, true); // Requiere auth
   },
 
   // --- AÑADE ESTA NUEVA FUNCIÓN ---
   getUserBids() {
-    return request('/auctions/bids/my-bids', 'GET', null, true); // Ruta protegida
+    return request("/auctions/bids/my-bids", "GET", null, true); // Ruta protegida
   },
 
   // --- Chat Service ---
@@ -152,7 +160,7 @@ export const api = {
 };
 
 // ================================================================
-// Cliente de WebSockets (sin cambios, la lógica era correcta)
+// Cliente de WebSockets - ACTUALIZADO para coincidir con el backend
 // ================================================================
 export const socket = {
   chat: null,
@@ -164,24 +172,43 @@ export const socket = {
       return;
     }
 
+    // Configuración común para ambos servicios
     const commonOptions = (path) => ({
       path,
       auth: { token },
+      cors: { origin: "*" },
+      transports: ["polling"], // ¡Cambia a 'polling' para probar!
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionDelay: 100,
     });
 
+    // Conectar al Chat Service
     if (!this.chat) {
-      this.chat = io(WS_GATEWAY_URL, commonOptions("/chat/socket.io/"));
-      this.chat.on('connect', () => console.log('✅ Conectado al WebSocket de Chat'));
-      this.chat.on('connect_error', (err) => console.error('❌ Error de conexión al Chat:', err.message));
+      this.chat = io(WS_GATEWAY_URL, commonOptions("/chat/socket.io"));
+      this.chat.on("connect", () =>
+        console.log("✅ Conectado al Chat Service:", this.chat.id)
+      );
+      this.chat.on("connect_error", (err) =>
+        console.error("❌ Error de conexión al Chat:", err.message)
+      );
+      this.chat.on("disconnect", (reason) =>
+        console.log("❌ Desconectado del Chat:", reason)
+      );
     }
 
+    // Conectar al Auction Service
     if (!this.auction) {
-      this.auction = io(WS_GATEWAY_URL, commonOptions("/auction/socket.io/"));
-      this.auction.on('connect', () => console.log('✅ Conectado al WebSocket de Subastas'));
-      this.auction.on('connect_error', (err) => console.error('❌ Error de conexión a Subastas:', err.message));
+      this.auction = io(WS_GATEWAY_URL, commonOptions("/auction/socket.io"));
+      this.auction.on("connect", () =>
+        console.log("✅ Conectado al Auction Service:", this.auction.id)
+      );
+      this.auction.on("connect_error", (err) =>
+        console.error("❌ Error de conexión a Auction:", err.message)
+      );
+      this.auction.on("disconnect", (reason) =>
+        console.log("❌ Desconectado del Auction:", reason)
+      );
     }
   },
 
@@ -189,12 +216,12 @@ export const socket = {
     if (this.chat) {
       this.chat.disconnect();
       this.chat = null;
-      console.log('🔌 Desconectado del WebSocket de Chat');
+      console.log("🔌 Desconectado del Chat Service");
     }
     if (this.auction) {
       this.auction.disconnect();
       this.auction = null;
-      console.log('🔌 Desconectado del WebSocket de Subastas');
+      console.log("🔌 Desconectado del Auction Service");
     }
-  }
+  },
 };
