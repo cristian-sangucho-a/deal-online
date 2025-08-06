@@ -48,6 +48,18 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
 
+# Re-declare build args to pass them as environment variables to runtime
+ARG PUBLIC_API_URL
+ARG PUBLIC_WS_URL
+ARG PUBLIC_SUPABASE_URL
+ARG PUBLIC_SUPABASE_ANON_KEY
+
+# Set runtime environment variables
+ENV PUBLIC_API_URL=$PUBLIC_API_URL
+ENV PUBLIC_WS_URL=$PUBLIC_WS_URL
+ENV PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL
+ENV PUBLIC_SUPABASE_ANON_KEY=$PUBLIC_SUPABASE_ANON_KEY
+
 # Create a startup script to debug environment variables
 RUN echo '#!/bin/sh' > start.sh && \
     echo 'echo "=== Environment Variables ===" ' >> start.sh && \
