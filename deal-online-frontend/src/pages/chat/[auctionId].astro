@@ -206,6 +206,7 @@ if (!auction && !error) {
   let chatSocket = null;
   let auctionSocket = null;
   let isConnected = false;
+  let isApiReady = false;
 
   // Initialize everything
   async function init() {
@@ -217,6 +218,14 @@ if (!auction && !error) {
       
       const apiModule = await import('/src/services/api.js');
       api = apiModule.api;
+      
+      // Verify API is loaded correctly
+      console.log('🔧 API loaded:', !!api);
+      console.log('🔧 placeBid method available:', typeof api.placeBid);
+      
+      // Mark API as ready
+      isApiReady = !!api && typeof api.placeBid === 'function';
+      console.log('🔧 API ready:', isApiReady);
       
       // Import Socket.IO from CDN since it might not be available as ES module
       if (!window.io) {
@@ -241,6 +250,9 @@ if (!auction && !error) {
       if (token) {
         initWebSockets(token);
       }
+      
+      // Update auth UI after API is loaded
+      checkAuth();
       
       // Initialize countdown
       if (auction?.status === 'active' && auction?.end_time) {
@@ -271,9 +283,16 @@ if (!auction && !error) {
       messageForm?.classList.remove('hidden');
       messageAuthRequired?.classList.add('hidden');
       
-      // Habilitar formulario de ofertas si hay token válido
-      if (bidAmount) bidAmount.disabled = false;
-      if (bidButton) bidButton.disabled = false;
+      // Habilitar formulario de ofertas si hay token válido y API está lista
+      if (bidAmount) bidAmount.disabled = !isApiReady;
+      if (bidButton) {
+        bidButton.disabled = !isApiReady;
+        if (!isApiReady) {
+          bidButton.textContent = 'Cargando...';
+        } else {
+          bidButton.textContent = 'Ofertar';
+        }
+      }
     } else {
       bidForm?.classList.add('hidden');
       authRequired?.classList.remove('hidden');
@@ -561,6 +580,11 @@ if (!auction && !error) {
           return;
         }
         
+        if (!isApiReady || !api || typeof api.placeBid !== 'function') {
+          alert('La aplicación aún se está cargando. Por favor, espera un momento.');
+          return;
+        }
+        
         const amount = parseFloat(amountInput.value);
         const currentPrice = parseFloat(auction.current_price);
         const minBid = currentPrice + 0.01;
@@ -576,6 +600,13 @@ if (!auction && !error) {
         
         try {
           console.log('📤 Enviando oferta:', { amount });
+          console.log('🔧 API object:', api);
+          console.log('🔧 placeBid method:', typeof api?.placeBid);
+          
+          if (!api || typeof api.placeBid !== 'function') {
+            throw new Error('API no está disponible o placeBid no es una función');
+          }
+          
           const response = await api.placeBid(auction.id, amount);
           
           console.log('✅ Oferta enviada exitosamente:', response);
