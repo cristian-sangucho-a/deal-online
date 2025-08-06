@@ -284,12 +284,11 @@ steps:
           --cpu=1 \
           --timeout=300 \
           --port=3000 \
-          --set-env-vars="PUBLIC_API_URL=$$API_GATEWAY_URL,PUBLIC_WS_URL=$$WS_URL/chat/socket.io,NODE_ENV=production,DEBUG=false,PUBLIC_SUPABASE_URL=$$SUPABASE_URL,PUBLIC_SUPABASE_ANON_KEY=$$SUPABASE_ANON_KEY"
+          --set-env-vars="PUBLIC_API_URL=$$API_GATEWAY_URL,PUBLIC_WS_URL=$$WS_URL/chat/socket.io,NODE_ENV=production,DEBUG=false" \
+          --set-secrets="PUBLIC_SUPABASE_URL=SUPABASE_URL:latest,PUBLIC_SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest"
     id: "deploy-frontend"
     waitFor: ["push-frontend"]
-    secretEnv: ["SUPABASE_URL", "SUPABASE_ANON_KEY"]
-
-  # ================================================================
+    secretEnv: ["SUPABASE_URL", "SUPABASE_ANON_KEY"] # ================================================================
   # Configurar permisos públicos para el frontend
   # ================================================================
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
