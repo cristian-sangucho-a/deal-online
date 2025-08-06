@@ -210,18 +210,29 @@ steps:
           --timeout=300 \
           --set-env-vars="AUTH_SERVICE_URL=$$AUTH_URL,AUCTION_SERVICE_URL=$$AUCTION_URL,CHAT_SERVICE_URL=$$CHAT_URL" \
           --set-secrets="JWT_SECRET=JWT_SECRET:latest"
+
+        # Obtener la URL recién desplegada y guardarla
+        NEW_API_GATEWAY_URL=$(gcloud run services describe api-gateway --platform=managed --region=southamerica-east1 --format='value(status.url)')
+        echo "📝 API Gateway URL deployed: $$NEW_API_GATEWAY_URL"
+        echo "$$NEW_API_GATEWAY_URL" > /workspace/api_gateway_url.txt
     id: "deploy-api-gateway"
     waitFor: ["push-api-gateway", "set-public-permissions"]
 
   # ================================================================
   # Frontend Build and Deploy (Después del API Gateway)
   # ================================================================
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/cloud-builders/docker"
     entrypoint: "bash"
     args:
       - "-c"
       - |
-        API_GATEWAY_URL=$(gcloud run services describe api-gateway --platform=managed --region=southamerica-east1 --format='value(status.url)')
+        if [ -f /workspace/api_gateway_url.txt ]; then
+          API_GATEWAY_URL=$(cat /workspace/api_gateway_url.txt)
+        else
+          echo "❌ No se pudo obtener la URL del API Gateway"
+          exit 1
+        fi
+
         WS_URL=$(echo "$$API_GATEWAY_URL" | sed 's/https:/wss:/')
         echo "✅ Using API Gateway URL: $$API_GATEWAY_URL"
         echo "✅ Using WebSocket URL: $$WS_URL"
@@ -253,7 +264,13 @@ steps:
     args:
       - "-c"
       - |
-        API_GATEWAY_URL=$(gcloud run services describe api-gateway --platform=managed --region=southamerica-east1 --format='value(status.url)')
+        if [ -f /workspace/api_gateway_url.txt ]; then
+          API_GATEWAY_URL=$(cat /workspace/api_gateway_url.txt)
+        else
+          echo "❌ No se pudo obtener la URL del API Gateway desde archivo, intentando gcloud"
+          API_GATEWAY_URL=$(gcloud run services describe api-gateway --platform=managed --region=southamerica-east1 --format='value(status.url)')
+        fi
+
         WS_URL=$(echo "$$API_GATEWAY_URL" | sed 's/https:/wss:/')
         echo "🚀 Deploying frontend with API Gateway URL: $$API_GATEWAY_URL"
         echo "🚀 Deploying frontend with WebSocket URL: $$WS_URL"
