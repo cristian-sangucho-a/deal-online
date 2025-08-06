@@ -71,7 +71,8 @@ steps:
       - "--memory=256Mi"
       - "--cpu=1"
       - "--timeout=300"
-      - "--set-secrets=DATABASE_URL=AUCTION_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest"
+      - "--set-env-vars=RABBITMQ_EMAIL_QUEUE=emails_queue"
+      - "--set-secrets=DATABASE_URL=AUCTION_DB_URL:latest,JWT_SECRET=JWT_SECRET:latest,RABBITMQ_URL=RABBITMQ_URL:latest"
     id: "deploy-auction-service"
     waitFor: ["push-auction-service"]
 
